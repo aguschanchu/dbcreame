@@ -1,3 +1,5 @@
 migrations
 *.pyc
 *.stl
+media
+db.sqlite3
