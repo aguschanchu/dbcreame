@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.safestring import mark_safe
 import uuid
 import datetime
 
@@ -10,6 +11,7 @@ class Autor(models.Model):
 
     def __str__(self):
         return self.name
+
 '''
 Clases accesorias
 '''
@@ -37,6 +39,21 @@ class Polinomio(models.Model):
     def __str__(self):
         return "{} x^3+ {} x^2+ {} x+ {}".format(self.a3,self.a2,self.a1,self.a0)
 
+class Album(models.Model):
+    #Coleccion de fotos de un objeto
+    pic0 = models.ImageField(upload_to='images/')
+    pic1 = models.ImageField(blank=True,null=True,upload_to='images/')
+    pic2 = models.ImageField(blank=True,null=True,upload_to='images/')
+    pic3 = models.ImageField(blank=True,null=True,upload_to='images/')
+    pic4 = models.ImageField(blank=True,null=True,upload_to='images/')
+    pic5 = models.ImageField(blank=True,null=True,upload_to='images/')
+
+    def imagen_principal(self):
+        return mark_safe('<img src="{}" width="400" height="300" />'.format(self.pic0.url))
+
+    def __str__(self):
+        return self.pic0.name
+
 '''
 Clase de referencia externa. La idea es asignar id_externa al identificador que se utiliza en el repositorio indicado
 '''
@@ -60,7 +77,7 @@ class Objeto(models.Model):
     name = models.CharField(max_length=300)
     description = models.TextField(blank=True,null=True)
     like_count = models.IntegerField(blank=True,default=0)
-    image = models.ImageField()
+    image = models.ForeignKey(Album,on_delete=models.PROTECT)
     #files=
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
     creation_date = models.DateTimeField(default=datetime.datetime.now)

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra
+from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Album
 
 @admin.register(Autor)
 class AutorAdmin(admin.ModelAdmin):
@@ -39,3 +39,7 @@ class ObjetoPersonalizadoAdmin(admin.ModelAdmin):
 @admin.register(Compra)
 class CompraAdmin(admin.ModelAdmin):
     list_display = ('date','status')
+
+@admin.register(Album)
+class AlbumAdmin(admin.ModelAdmin):
+    readonly_fields = ['imagen_principal']
