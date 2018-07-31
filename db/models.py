@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.safestring import mark_safe
+from .tools import import_from_thingi
 import uuid
 import datetime
 
@@ -10,7 +11,7 @@ Modelos internos (almacenados en la DB)
 class Autor(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=300)
-    username = models.CharField(max_length=300)
+    username = models.CharField(max_length=300,unique=True)
     contact_email = models.EmailField(blank=True,null=True)
 
     def __str__(self):
@@ -20,13 +21,13 @@ class Autor(models.Model):
 Clases accesorias
 '''
 class Categoria(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100,unique=True)
 
     def __str__(self):
         return self.name
 
 class Tag(models.Model):
-    name = models.CharField(max_length=300)
+    name = models.CharField(max_length=300,unique=True)
 
     def __str__(self):
         return self.name
