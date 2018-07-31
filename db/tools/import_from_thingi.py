@@ -68,15 +68,32 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     if "Not Found" in r.values():
         raise ValueError("Thingiid invalida")
     # Procedemos a crear la thing
+    ## Referencia Externa
+    if modelos.ReferenciaExterna.objects.filter(repository='thingiverse',external_id=r['id']).exists():
+        #Pudimos obtener el modelo. eso significa que ya existe!
+        raise ValueError("Referencia externa en DB ¿existe el modelo?")
+    else:
+        #Procedemos a crear la ref externa
+        referencia_externa = modelos.ReferenciaExterna.objects.create(repository='thingiverse',external_id=r['id'])
     ## Autor
-    ### ¿Existe el autor?
-    try:
-        autor = modelos.Autor.objects.get(username=r['creator']['name'])
-    ### No existe, creamos el autor
-    except:
-        autor = modelos.Autor.objects.create(username=r['creator']['name'],name=r['creator']['first_name'])
+    autor = modelos.Autor.objects.get_or_create(username=r['creator']['name'],name=r['creator']['firstname'])
     ## Categorias
     rcat = request_from_thingi('things/{}/categories'.format(thingiid))
+    categorias = []
+    ### Veamos que categorias existen, en la DB. Las que no, las creamos.
+    for cat in rcat:
+        categorias.append(modelos.Categoria.objects.get_or_create(name=cat['name']))
+    ## Tags
+    rtag = request_from_thingi('things/{}/tags'.format(thingiid))
+    tags = []
+    ### Veamos que categorias existen, en la DB. Las que no, las creamos.
+    for tag in rtag:
+        tags.append(modelos.Tag.objects.get_or_create(name=tag['name']))
+    ## Album
+    
+
+
+
 
 
 
