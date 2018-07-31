@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 import time
 
-print(modelos)
 '''
 Tenemos un limite de 300/5', queremos monitorear cada key, para no pasarnos
 '''
@@ -41,7 +40,6 @@ class ApiKey(models.Model):
         else:
             return False
 
-
 def get_api_key():
     for key in ApiKey.objects.all():
         if key.available():
@@ -50,18 +48,22 @@ def get_api_key():
         else:
             return None
 
+def request_from_thingi(url):
+    endpoint = 'https://api.thingiverse.com/'
+    for _ in range(0,60):
+        k = get_api_key()
+        if k != None:
+            r = requests.get(endpoint+url+'?access_token='+k).json()
+            return r
+    else:
+        raise ValueError("Error al hacer la request ¿hay API keys disponibles?")
+
 '''
 Ahora que ya tenemos control sobre las keys, descargamos el objeto
 '''
 
 def add_object_from_thingiverse(thingiid,file_list = None):
-    for _ in range(0,60):
-        k = get_api_key()
-        if k != None:
-            r = requests.get('https://api.thingiverse.com/things/{}?access_token={}'.format(thingiid,k)).json()
-            break
-    else:
-        raise ValueError("Error al hacer la request ¿hay API keys disponibles?")
+    r = request_from_thingi('things/{}'.format(thingiid))
     #Existe la thing?
     if "Not Found" in r.values():
         raise ValueError("Thingiid invalida")
@@ -74,14 +76,7 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     except:
         autor = modelos.Autor.objects.create(username=r['creator']['name'],name=r['creator']['first_name'])
     ## Categorias
-    for _ in range(0,60):
-        k = get_api_key()
-        if k != None:
-            rcat = requests.get('https://api.thingiverse.com/things/{}/categories?access_token={}'.format(thingiid,k)).json()
-            break
-    else:
-        raise ValueError("Error al hacer la request ¿hay API keys disponibles?")
-
+    rcat = request_from_thingi('things/{}/categories'.format(thingiid))
 
 
 
