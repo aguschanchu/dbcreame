@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Album
+from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Album, ArchivoSTL
 
 @admin.register(Autor)
 class AutorAdmin(admin.ModelAdmin):
@@ -7,6 +7,11 @@ class AutorAdmin(admin.ModelAdmin):
 
 @admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
+
+@admin.register(ArchivoSTL)
+class ArchivoSTLAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
 
@@ -26,7 +31,7 @@ class ReferenciaExternaAdmin(admin.ModelAdmin):
 class ObjetoAdmin(admin.ModelAdmin):
     list_display = ('name','author','external_id')
     raw_id_fields = ('author',)
-    filter_horizontal = ('category','tags')
+    filter_horizontal = ('category','tags','files')
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):

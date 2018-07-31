@@ -3,6 +3,10 @@ from django.utils.safestring import mark_safe
 import uuid
 import datetime
 
+'''
+Modelos internos (almacenados en la DB)
+'''
+
 class Autor(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=300)
@@ -54,6 +58,16 @@ class Album(models.Model):
     def __str__(self):
         return self.pic0.name
 
+class ArchivoSTL(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    file = models.FileField(upload_to='stl/')
+
+    def __str__(self):
+        return self.file.name
+
+    def name(self):
+        return self.file.name
+
 '''
 Clase de referencia externa. La idea es asignar id_externa al identificador que se utiliza en el repositorio indicado
 '''
@@ -78,7 +92,7 @@ class Objeto(models.Model):
     description = models.TextField(blank=True,null=True)
     like_count = models.IntegerField(blank=True,default=0)
     image = models.ForeignKey(Album,on_delete=models.PROTECT)
-    #files=
+    files = models.ManyToManyField(ArchivoSTL)
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
     creation_date = models.DateTimeField(default=datetime.datetime.now)
     category = models.ManyToManyField(Categoria)
@@ -128,3 +142,12 @@ class Compra(models.Model):
     delivery_address = models.CharField(max_length=300)
     #Este campo hay que optimizarlo segun el output de MP
     payment_method = models.CharField(max_length=300)
+
+'''
+Modelos externos (utilizados para serializar información)
+'''
+
+class ObjetoThingi(models.Model):
+    id_externa = models.IntegerField()
+    #Lista de archivos thing a tener en cuenta. Puede ser 'all', o una lista en formato json
+    file_list = models.CharField(max_length=300)
