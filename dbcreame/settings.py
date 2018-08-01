@@ -123,3 +123,6 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = 'media/'
 MEDIA_URL = '/media/'
+
+#Configuraciones adicionales
+SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'
