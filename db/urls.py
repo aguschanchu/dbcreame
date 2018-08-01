@@ -6,4 +6,5 @@ from rest_framework.urlpatterns import format_suffix_patterns
 urlpatterns = [
     url(r'^category/(?P<category>[\w.@+-]+)/$', views.CategoryView.as_view()),
     path('view/<uuid:id>/', views.ObjectView.as_view()),
+    path('tools/add_object_from_thingiverse/',views.AddObjectFromThingiverse.as_view())
 ]

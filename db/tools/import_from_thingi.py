@@ -123,8 +123,11 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     ## Archvos STL
     rfiles = request_from_thingi('things/{}/files'.format(thingiid))
     files_available_id = [a['id'] for a in rfiles]
+    print(file_list)
     if file_list == None:
         file_list = files_available_id
+    else:
+        file_list = json.loads(file_list)
     ### Nos pasaron una lista de archivos valida?
     for id in file_list:
         if id not in files_available_id:

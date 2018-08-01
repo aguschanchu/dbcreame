@@ -57,21 +57,6 @@ class Imagen(models.Model):
     def view_image(self):
         return mark_safe('<img src="{}" width="400" height="300" />'.format(self.photo.url))
 
-'''class Album(models.Model):
-    #Coleccion de fotos de un objeto
-    pic0 = models.ImageField(upload_to='images/')
-    pic1 = models.ImageField(blank=True,null=True,upload_to='images/')
-    pic2 = models.ImageField(blank=True,null=True,upload_to='images/')
-    pic3 = models.ImageField(blank=True,null=True,upload_to='images/')
-    pic4 = models.ImageField(blank=True,null=True,upload_to='images/')
-    pic5 = models.ImageField(blank=True,null=True,upload_to='images/')
-
-    def imagen_principal(self):
-        return mark_safe('<img src="{}" width="400" height="300" />'.format(self.pic0.url))
-
-    def __str__(self):
-        return self.pic0.name'''
-
 class ArchivoSTL(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     file = models.FileField(upload_to='stl/')
@@ -97,9 +82,9 @@ Clase de referencia externa. La idea es asignar id_externa al identificador que 
 '''
 
 repositorios = (
-('thingiverse', 'Thingiverse'),
-('youmagine', 'YouMagine'),
-('externo', 'Extero (archivo propio)'),
+    ('thingiverse', 'Thingiverse'),
+    ('youmagine', 'YouMagine'),
+    ('externo', 'Extero (archivo propio)'),
 )
 
 class ReferenciaExterna(models.Model):
@@ -149,14 +134,14 @@ class ObjetoPersonalizado(models.Model):
 
 class Compra(models.Model):
     estados = (
-    ('accepted', 'Aceptado'),
-    ('printing', 'Imprimiendo'),
-    ('shipped', 'Enviado'),
+        ('accepted', 'Aceptado'),
+        ('printing', 'Imprimiendo'),
+        ('shipped', 'Enviado'),
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     purchased_objects = models.ManyToManyField(ObjetoPersonalizado)
     date = models.DateTimeField(default=datetime.datetime.now)
-    status = models.CharField(choices=repositorios,max_length=300)
+    status = models.CharField(choices=estados,max_length=300)
     delivery_address = models.CharField(max_length=300)
     #Este campo hay que optimizarlo segun el output de MP
     payment_method = models.CharField(max_length=300)
@@ -166,6 +151,12 @@ Modelos externos (utilizados para serializar información)
 '''
 
 class ObjetoThingi(models.Model):
-    id_externa = models.IntegerField()
+    estados = (
+        ('processing', 'Procesando'),
+        ('error', 'Error'),
+        ('finished', 'Finalizado'),
+    )
+    external_id = models.IntegerField()
     #Lista de archivos thing a tener en cuenta. Puede ser 'all', o una lista en formato json
-    file_list = models.CharField(max_length=300)
+    file_list = models.CharField(max_length=300,blank=True,null=True)
+    status = models.CharField(choices=estados,max_length=300,blank=True,default="processing")
