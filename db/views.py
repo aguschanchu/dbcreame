@@ -1,5 +1,5 @@
 from db.serializers import ObjetoSerializer
-from .models import Objeto, Album
+from .models import Objeto
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -13,7 +13,7 @@ class CategoryView(generics.ListAPIView):
 
     def get_queryset(self):
         category = self.kwargs.get(self.lookup_url_kwarg)
-        objetos = Objeto.objects.select_related('image').filter(category__name=category)
+        objetos = Objeto.objects.filter(category__name=category)
         return objetos
 
 class ObjectView(APIView):
@@ -28,11 +28,6 @@ class ObjectView(APIView):
         respuesta['category'] = json.dumps([a.name for a in objeto.category.all()])
         respuesta['tags'] = json.dumps([a.name for a in objeto.tags.all()])
         respuesta['author'] = objeto.author.name
-        image = []
-        for a in [getattr(objeto.image, a) for a in dir(Album) if 'pic' in a]:
-            try:
-                image.append(a.url)
-            except ValueError:
-                pass
-        respuesta['image'] = json.dumps(image)
+        respuesta['images'] = json.dumps([a.photo.url for a in objeto.images.all()])
+
         return Response(respuesta)

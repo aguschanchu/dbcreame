@@ -42,9 +42,22 @@ class Polinomio(models.Model):
     a5 = models.FloatField(default=0)
 
     def __str__(self):
-        return "{} x^3+ {} x^2+ {} x+ {}".format(self.a3,self.a2,self.a1,self.a0)
+        return "{} x^5+ {} x^4+ {} x^3+ {} x^2+ {} x+ {}".format(self.a0,self.a1,self.a2,self.a3,self.a4,self.a5)
 
-class Album(models.Model):
+class Imagen(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    photo = models.ImageField(upload_to='images/')
+
+    def __str__(self):
+        return self.photo.name
+
+    def name(self):
+        return self.photo.name
+
+    def view_image(self):
+        return mark_safe('<img src="{}" width="400" height="300" />'.format(self.photo.url))
+
+'''class Album(models.Model):
     #Coleccion de fotos de un objeto
     pic0 = models.ImageField(upload_to='images/')
     pic1 = models.ImageField(blank=True,null=True,upload_to='images/')
@@ -57,11 +70,21 @@ class Album(models.Model):
         return mark_safe('<img src="{}" width="400" height="300" />'.format(self.pic0.url))
 
     def __str__(self):
-        return self.pic0.name
+        return self.pic0.name'''
 
 class ArchivoSTL(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     file = models.FileField(upload_to='stl/')
+
+    #Tiempo de impresion en escala 1, en segundos
+    printing_time_default = models.IntegerField(default=0)
+    time_as_a_function_of_scale = models.ForeignKey(Polinomio,on_delete=models.SET_NULL,null=True)
+    #Dimensiones del objeto en escala 1, en mm
+    size_x_default = models.FloatField(default=10)
+    size_y_default = models.FloatField(default=10)
+    size_z_default = models.FloatField(default=10)
+    #Peso del objeto en escala 1, en g
+    weight_default = models.FloatField(default=10)
 
     def __str__(self):
         return self.file.name
@@ -92,7 +115,8 @@ class Objeto(models.Model):
     name = models.CharField(max_length=300)
     description = models.TextField(blank=True,null=True)
     like_count = models.IntegerField(blank=True,default=0)
-    image = models.ForeignKey(Album,on_delete=models.PROTECT)
+    main_image = models.ImageField(upload_to='images/')
+    images = models.ManyToManyField(Imagen)
     files = models.ManyToManyField(ArchivoSTL)
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
     creation_date = models.DateTimeField(default=datetime.datetime.now)
@@ -100,18 +124,11 @@ class Objeto(models.Model):
     #No estoy 100% seguro de que esta sea la mejor implementacion para los tags. En particular, por la busqueda
     tags = models.ManyToManyField(Tag)
     external_id = models.ForeignKey(ReferenciaExterna,on_delete=models.SET_NULL,null=True)
-    #Tiempo de impresion en escala 1, en segundos
-    printing_time_default = models.IntegerField(default=0)
-    time_as_a_function_of_scale = models.ForeignKey(Polinomio,on_delete=models.SET_NULL,null=True)
-    #Dimensiones del objeto en escala 1, en mm
-    size_x_default = models.FloatField(default=10)
-    size_y_default = models.FloatField(default=10)
-    size_z_default = models.FloatField(default=10)
-    #Peso del objeto en escala 1, en g
-    weight_default = models.FloatField(default=10)
     #Se muestra en el catalogo?
     hidden = models.BooleanField(default=False)
 
+    def view_main_image(self):
+        return mark_safe('<img src="{}" width="400" height="300" />'.format(self.main_image.url))
 
 class Usuario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

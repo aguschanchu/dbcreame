@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Album, ArchivoSTL
+from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL
 
 @admin.register(Autor)
 class AutorAdmin(admin.ModelAdmin):
@@ -12,8 +12,9 @@ class CategoriaAdmin(admin.ModelAdmin):
 
 @admin.register(ArchivoSTL)
 class ArchivoSTLAdmin(admin.ModelAdmin):
-    list_display = ('name',)
-    search_fields = ('name',)
+    list_display = ('name', 'printing_time_default', 'time_as_a_function_of_scale', 'size_x_default',
+    'size_y_default', 'size_z_default', 'weight_default')
+    search_fields = ('name', )
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
@@ -32,6 +33,7 @@ class ObjetoAdmin(admin.ModelAdmin):
     list_display = ('name','author','external_id')
     raw_id_fields = ('author',)
     filter_horizontal = ('category','tags','files')
+    readonly_fields = ['view_main_image']
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
@@ -45,6 +47,12 @@ class ObjetoPersonalizadoAdmin(admin.ModelAdmin):
 class CompraAdmin(admin.ModelAdmin):
     list_display = ('date','status')
 
-@admin.register(Album)
+'''@admin.register(Album)
 class AlbumAdmin(admin.ModelAdmin):
-    readonly_fields = ['imagen_principal']
+    readonly_fields = ['imagen_principal']'''
+
+@admin.register(Imagen)
+class ImagenAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
+    readonly_fields = ['view_image']
