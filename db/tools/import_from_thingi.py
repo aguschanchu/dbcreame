@@ -204,7 +204,7 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         archivo.size_y_default = rf['size_y']
         archivo.size_z_default = rf['size_z']
         archivo.weight_default = rf['peso']
-        archivo.tiempo_en_funcion_de_escala = polinomio
+        archivo.time_as_a_function_of_scale = polinomio
         archivo.save()
 
     ## Creacion de Objeto
