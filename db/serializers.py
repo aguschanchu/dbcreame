@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Objeto, ObjetoThingi, ArchivoSTL, Imagen, Tag, Autor, ReferenciaExterna, Polinomio
+from .models import Objeto, ObjetoThingi, Categoria, Tag
 
 
 class ObjetoSerializer(serializers.ModelSerializer):
@@ -12,7 +12,6 @@ class ObjetoSerializer(serializers.ModelSerializer):
          'files', 'author', 'creation_date', 'category', 'tags', 'external_id',
          'hidden')
 
-
 class ObjetoThingiSerializer(serializers.ModelSerializer):
     class Meta:
         model = ObjetoThingi
@@ -21,4 +20,9 @@ class ObjetoThingiSerializer(serializers.ModelSerializer):
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
+        fields = ('name', )
+
+class CategoriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categoria
         fields = ('name', )

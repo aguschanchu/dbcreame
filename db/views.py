@@ -1,5 +1,5 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer
-from .models import Objeto, ObjetoThingi
+from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer
+from db.models import Objeto, Tag, Categoria
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -8,6 +8,10 @@ from django.http import Http404
 from .tools import import_from_thingi
 import json
 import traceback
+
+'''
+Query view
+'''
 
 class CategoryView(generics.ListAPIView):
     serializer_class = ObjetoSerializer
@@ -46,6 +50,32 @@ class NameView(generics.ListAPIView):
         name = self.kwargs.get(self.lookup_url_kwarg)
         objetos = Objeto.objects.filter(name__contains=name)
         return objetos
+
+'''
+List views
+'''
+
+class ListAllObjectsView(generics.ListAPIView):
+    serializer_class = ObjetoSerializer
+
+    def get_queryset(self):
+        return Objeto.objects.all()
+
+class ListAllCategoriesView(generics.ListAPIView):
+    serializer_class = CategoriaSerializer
+
+    def get_queryset(self):
+        return Categoria.objects.all()
+
+class ListAllTagsView(generics.ListAPIView):
+    serializer_class = TagSerializer
+
+    def get_queryset(self):
+        return Tag.objects.all()
+
+'''
+Operations view
+'''
 
 class AddObjectFromThingiverse(APIView):
     #Agregar objeto desde id y lista de archivos
