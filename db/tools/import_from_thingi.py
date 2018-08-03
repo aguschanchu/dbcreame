@@ -19,8 +19,8 @@ class QueryEvent(models.Model):
 
 class ApiKey(models.Model):
     endpoint = 'api.thingiverse.com'
-    quota = 5
-    quota_interval = 20
+    quota = 290
+    quota_interval = 5*60
     key = models.CharField(max_length=100)
     meter = models.ManyToManyField(QueryEvent)
 
@@ -62,8 +62,10 @@ def request_from_thingi(url,content=False):
             else:
                 r = requests.get(endpoint+url+'?access_token='+k).content
             return r
+        time.sleep(1)
     else:
         traceback.print_exc()
+        print("URL que intente acceder: "+endpoint+url+'?access_token='+str(k))
         raise ValueError("Error al hacer la request ¿hay API keys disponibles?")
 
 '''
@@ -71,6 +73,7 @@ Ahora que ya tenemos control sobre las keys, descargamos el objeto
 '''
 
 def add_object_from_thingiverse(thingiid,file_list = None):
+    print("Iniciando descarga de "+str(thingiid))
     r = request_from_thingi('things/{}'.format(thingiid))
     #Existe la thing?
     if "Not Found" in r.values():
@@ -98,6 +101,7 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     for tag in rtag:
         tags.append(modelos.Tag.objects.get_or_create(name=tag['name'])[0])
     ## Imagenes
+    print("Descargando imagenes")
     rimg = request_from_thingi('things/{}/images'.format(thingiid))
     ###Imagen principal
     url = rimg[0]['sizes'][12]['url']
@@ -123,7 +127,6 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     ## Archvos STL
     rfiles = request_from_thingi('things/{}/files'.format(thingiid))
     files_available_id = [a['id'] for a in rfiles]
-    print(file_list)
     if file_list == None:
         file_list = files_available_id
     else:
@@ -133,7 +136,7 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         if id not in files_available_id:
             raise ValueError("IDs de archivos invalida: "+id)
     ### Tenemos una lista valida, procedemos a descargar los archivos
-    print(file_list)
+    print('Descargando lista de archivos: \n', file_list)
     archivos = []
     for id in file_list:
         for thing_file in rfiles:
@@ -143,6 +146,7 @@ def add_object_from_thingiverse(thingiid,file_list = None):
                     try:
                         rfile_src = requests.get(thing_file['default_image']['url'])
                     except:
+                        print(thing_file)
                         raise ValueError("Error al descargar archivo")
                     archivo = modelos.ArchivoSTL()
                     archivo.file.save(name,ContentFile(rfile_src.content))
@@ -156,11 +160,9 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         archivos_r = {'file': archivo.file.open(mode='rb')}
         rfp = requests.post(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/', files = archivos_r)
         archivo.file.close
-        print(rfp.content)
         #Parseamos la id de trabajo
         slicer_jobs_ids[archivo] = rf.json()['id']
         slicer_jobs_ids_poly[archivo] = rfp.json()['id']
-    print(slicer_jobs_ids, slicer_jobs_ids_poly)
     ### Esperamos 300s a que haga todos los trabajos
     poly_f, slice_f = False, False
     for _ in range(0,300):
@@ -188,6 +190,7 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         print(slicer_jobs_ids.values(), slicer_jobs_ids_poly.values())
         raise ValueError("Timeout al solicitar el sliceo de los modelos")
     ### Completamos todos los datos de los archivos
+    print("Creacion de objeto")
     for archivo in archivos:
         #Creamos el polinomio
         rf = json.loads(requests.get(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/status/{}/'.format(slicer_jobs_ids_poly[archivo])).json()['poly'])
@@ -211,7 +214,6 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     objeto = modelos.Objeto()
 
     ### Asignamos los campos
-    print(autor)
     objeto.author = autor
     objeto.name = r['name']
     objeto.description = r['description']
@@ -247,8 +249,15 @@ def add_object_from_thingiverse(thingiid,file_list = None):
 '''
 from db.tools.import_from_thingi import *
 from db.models import *
-a = ***REMOVED***
-add_object_from_thingiverse(1278865)
+***REMOVED***
+***REMOVED***
+***REMOVED***
+***REMOVED***
+
+add_object_from_thingiverse(1159321)
+objects = [481259,430957,570288,2918926,2995849,3002897,1159321,2829553,2531208]
+for object in objects:
+    add_object_from_thingiverse(object)
 p = QueryPool.objects.create()
 p.keys.add(a)
 p.get_key()
