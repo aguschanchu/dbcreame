@@ -1,6 +1,6 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer
+from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer
 from .models import Objeto, ObjetoThingi
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
@@ -18,21 +18,34 @@ class CategoryView(generics.ListAPIView):
         objetos = Objeto.objects.filter(category__name=category)
         return objetos
 
-class ObjectView(APIView):
-    def get(self, request, id, format=None):
-        try:
-            objeto = Objeto.objects.get(pk=id)
-        except:
-            raise Http404
-        serializer = ObjetoSerializer(objeto)
-        respuesta = serializer.data
-        #Reemplazamos las ids de categorias, imagenes, tags, y autores, por sus respectivos nombres
-        respuesta['category'] = json.dumps([a.name for a in objeto.category.all()])
-        respuesta['tags'] = json.dumps([a.name for a in objeto.tags.all()])
-        respuesta['author'] = objeto.author.name
-        respuesta['images'] = json.dumps([a.photo.url for a in objeto.images.all()])
+class TagView(generics.ListAPIView):
+    serializer_class = ObjetoSerializer
+    lookup_url_kwarg = 'tags'
 
-        return Response(respuesta)
+    def get_queryset(self):
+        tags = self.kwargs.get(self.lookup_url_kwarg).split(',')
+        objetos = Objeto.objects.all()
+        for tag in tags:
+            objetos = objetos.filter(tags__name=tag)
+        return objetos
+
+class ObjectView(generics.RetrieveAPIView):
+    serializer_class = ObjetoSerializer
+    lookup_url_kwarg = 'id'
+
+    def get_object(self):
+        id = self.kwargs.get(self.lookup_url_kwarg)
+        objeto = Objeto.objects.get(id=id)
+        return objeto
+
+class NameView(generics.ListAPIView):
+    serializer_class = ObjetoSerializer
+    lookup_url_kwarg = 'name'
+
+    def get_queryset(self):
+        name = self.kwargs.get(self.lookup_url_kwarg)
+        objetos = Objeto.objects.filter(name__contains=name)
+        return objetos
 
 class AddObjectFromThingiverse(APIView):
     #Agregar objeto desde id y lista de archivos

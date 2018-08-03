@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.safestring import mark_safe
+from django.utils import timezone 
 from .tools import import_from_thingi
 import uuid
 import datetime
@@ -104,7 +105,7 @@ class Objeto(models.Model):
     images = models.ManyToManyField(Imagen)
     files = models.ManyToManyField(ArchivoSTL)
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
-    creation_date = models.DateTimeField(default=datetime.datetime.now)
+    creation_date = models.DateTimeField(default=timezone.now)
     category = models.ManyToManyField(Categoria)
     #No estoy 100% seguro de que esta sea la mejor implementacion para los tags. En particular, por la busqueda
     tags = models.ManyToManyField(Tag)
