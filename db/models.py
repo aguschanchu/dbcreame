@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils.safestring import mark_safe
-from django.utils import timezone 
+from django.utils import timezone
 from .tools import import_from_thingi
 import uuid
 import datetime
@@ -43,7 +43,7 @@ class Polinomio(models.Model):
     a5 = models.FloatField(default=0)
 
     def __str__(self):
-        return "{} x^5+ {} x^4+ {} x^3+ {} x^2+ {} x+ {}".format(self.a0,self.a1,self.a2,self.a3,self.a4,self.a5)
+        return "{} x^5+ {} x^4+ {} x^3+ {} x^2+ {} x+ {}".format(self.a5,self.a4,self.a3,self.a2,self.a1,self.a0)
 
 class Imagen(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

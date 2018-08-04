@@ -212,10 +212,10 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         #Creamos el polinomio
         rf = json.loads(requests.get(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/status/{}/'.format(slicer_jobs_ids_poly[archivo])).json()['poly'])
         polinomio = modelos.Polinomio()
-        polinomio.a2 = rf[0]
-        polinomio.a3 = rf[1]
-        polinomio.a4 = rf[2]
-        polinomio.a5 = rf[3]
+        polinomio.a0 = rf[3]
+        polinomio.a1 = rf[2]
+        polinomio.a2 = rf[1]
+        polinomio.a3 = rf[0]
         polinomio.save()
         #Establecemos los coeficientes y guardamos
         rf = requests.get(settings.SLICER_API_ENDPOINT+'status/{}/'.format(slicer_jobs_ids[archivo])).json()
