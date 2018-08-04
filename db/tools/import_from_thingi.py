@@ -10,6 +10,8 @@ from urllib.parse import urlparse
 import traceback
 from django.conf import settings
 import json
+
+
 '''
 Tenemos un limite de 300/5', queremos monitorear cada key, para no pasarnos
 '''
@@ -18,7 +20,6 @@ class QueryEvent(models.Model):
     date = models.DateTimeField(auto_now_add=True)
 
 class ApiKey(models.Model):
-    endpoint = 'api.thingiverse.com'
     quota = 290
     quota_interval = 5*60
     key = models.CharField(max_length=100)
@@ -26,7 +27,7 @@ class ApiKey(models.Model):
 
     def clean(self):
         #¿Es valida?
-        r = requests.get('https://api.thingiverse.com/things/763622?access_token='+str(self.key)).json()
+        r = requests.get(settings.THINGIVERSE_API_ENDPOINT+'things/763622?access_token='+str(self.key)).json()
         if 'Unauthorized' in r.values():
             raise ValidationError(_('API key invalida'))
 
@@ -53,7 +54,7 @@ def get_api_key():
             return None
 
 def request_from_thingi(url,content=False):
-    endpoint = 'https://api.thingiverse.com/'
+    endpoint = settings.THINGIVERSE_API_ENDPOINT
     for _ in range(0,60):
         k = get_api_key()
         if k != None:
@@ -69,8 +70,25 @@ def request_from_thingi(url,content=False):
         raise ValueError("Error al hacer la request ¿hay API keys disponibles?")
 
 '''
-Ahora que ya tenemos control sobre las keys, descargamos el objeto
+Ahora que ya tenemos control sobre las keys, nos preparamos para descargar el objeto
 '''
+
+def get_thing_categories_list(thingiid):
+    endpoint = settings.THINGIVERSE_API_ENDPOINT
+    rcat = request_from_thingi('things/{}/categories'.format(thingiid))
+    result = []
+    #Para cada una de las categorias, accedemos a la URL de esta
+    for cat in rcat:
+        category_info = request_from_thingi(cat['url'].split(endpoint)[1])
+        category_name = category_info['name']
+        has_parent = 'parent' in category_info
+        #Es una subcategoria? De ser así, accedemos a la padre
+        while has_parent:
+            category_info = request_from_thingi(category_info['parent']['url'].split(endpoint)[1])
+            category_name = category_info['name']
+            has_parent = 'parent' in category_info
+        result.append(category_name)
+    return result
 
 def add_object_from_thingiverse(thingiid,file_list = None):
     print("Iniciando descarga de "+str(thingiid))
@@ -89,11 +107,10 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     ## Autor
     autor = modelos.Autor.objects.get_or_create(username=r['creator']['name'],name=r['creator']['first_name'])[0]
     ## Categorias
-    rcat = request_from_thingi('things/{}/categories'.format(thingiid))
     categorias = []
     ### Veamos que categorias existen, en la DB. Las que no, las creamos.
-    for cat in rcat:
-        categorias.append(modelos.Categoria.objects.get_or_create(name=cat['name'])[0])
+    for cat in get_thing_categories_list(thingiid):
+        categorias.append(modelos.Categoria.objects.get_or_create(name=cat)[0])
     ## Tags
     rtag = request_from_thingi('things/{}/tags'.format(thingiid))
     tags = []
@@ -231,7 +248,6 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         objeto.tags.add(tag)
 
     objeto.save()
-
 
 
 
