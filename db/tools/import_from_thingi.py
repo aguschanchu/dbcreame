@@ -10,7 +10,10 @@ from urllib.parse import urlparse
 import traceback
 from django.conf import settings
 import json
-
+import urllib3
+from urllib3.util import Retry
+from urllib3 import PoolManager
+urllib3.disable_warnings()
 
 '''
 Tenemos un limite de 300/5', queremos monitorear cada key, para no pasarnos
@@ -55,13 +58,14 @@ def get_api_key():
 
 def request_from_thingi(url,content=False):
     endpoint = settings.THINGIVERSE_API_ENDPOINT
+    http = PoolManager(retries=Retry(total=5, status_forcelist=[500]))
     for _ in range(0,60):
         k = get_api_key()
         if k != None:
             if not content:
-                r = requests.get(endpoint+url+'?access_token='+k).json()
+                r = json.loads(http.request('GET',endpoint+url+'?access_token='+k).data.decode('utf-8'))
             else:
-                r = requests.get(endpoint+url+'?access_token='+k).content
+                r = http.request('GET',endpoint+url+'?access_token='+k).data
             return r
         time.sleep(1)
     else:
@@ -74,6 +78,7 @@ Ahora que ya tenemos control sobre las keys, nos preparamos para descargar el ob
 '''
 
 def get_thing_categories_list(thingiid):
+    http = PoolManager(retries=Retry(total=5, status_forcelist=[500]))
     endpoint = settings.THINGIVERSE_API_ENDPOINT
     rcat = request_from_thingi('things/{}/categories'.format(thingiid))
     result = []
@@ -91,6 +96,7 @@ def get_thing_categories_list(thingiid):
     return result
 
 def add_object_from_thingiverse(thingiid,file_list = None):
+    http = PoolManager(retries=Retry(total=5, status_forcelist=[500]))
     print("Iniciando descarga de "+str(thingiid))
     r = request_from_thingi('things/{}'.format(thingiid))
     #Existe la thing?
@@ -123,10 +129,10 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     ###Imagen principal
     url = rimg[0]['sizes'][12]['url']
     try:
-        rmain = requests.get(url)
+        rmain = http.request('GET', url).data
     except:
         raise ValueError("Error al descargar imagen")
-    main_image = ContentFile(rmain.content)
+    main_image = ContentFile(rmain)
     main_image_name = urlparse(url).path.split('/')[-1]
     ###Imagenes adicionales
     imagenes = []
@@ -134,11 +140,11 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         url = rimg[j]['sizes'][12]['url']
         name = urlparse(url).path.split('/')[-1]
         try:
-            rimg_src = requests.get(url)
+            rimg_src = http.request('GET', url).data
         except:
             raise ValueError("Error al descargar imagen")
         imagen = modelos.Imagen()
-        imagen.photo.save(name,ContentFile(rimg_src.content))
+        imagen.photo.save(name,ContentFile(rimg_src))
         imagenes.append(imagen)
 
     ## Archvos STL
@@ -161,12 +167,12 @@ def add_object_from_thingiverse(thingiid,file_list = None):
                 name = thing_file['name']
                 if '.stl' in name.lower():
                     try:
-                        rfile_src = requests.get(thing_file['default_image']['url'])
+                        rfile_src = http.request('GET', thing_file['default_image']['url']).data
                     except:
                         print(thing_file)
                         raise ValueError("Error al descargar archivo")
                     archivo = modelos.ArchivoSTL()
-                    archivo.file.save(name,ContentFile(rfile_src.content))
+                    archivo.file.save(name,ContentFile(rfile_src))
                     archivos.append(archivo)
     ### Tenemos los archivos descargados. Necesitamos completar su tiempo de imp, peso, dimensiones
     slicer_jobs_ids = {}
@@ -248,11 +254,6 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         objeto.tags.add(tag)
 
     objeto.save()
-
-
-
-
-
 
 
 
