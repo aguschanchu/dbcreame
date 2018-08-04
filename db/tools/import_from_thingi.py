@@ -167,7 +167,8 @@ def add_object_from_thingiverse(thingiid,file_list = None):
                 name = thing_file['name']
                 if '.stl' in name.lower():
                     try:
-                        rfile_src = http.request('GET', thing_file['default_image']['url']).data
+                        download_url = thing_file['download_url']
+                        rfile_src = http.request('GET', thing_file['download_url']+'?access_token='+get_api_key()).data
                     except:
                         print(thing_file)
                         raise ValueError("Error al descargar archivo")
