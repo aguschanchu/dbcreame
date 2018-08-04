@@ -56,16 +56,16 @@ def get_api_key():
         else:
             return None
 
-def request_from_thingi(url,content=False):
+def request_from_thingi(url,content=False,params=''):
     endpoint = settings.THINGIVERSE_API_ENDPOINT
     http = PoolManager(retries=Retry(total=5, status_forcelist=[500]))
     for _ in range(0,60):
         k = get_api_key()
         if k != None:
             if not content:
-                r = json.loads(http.request('GET',endpoint+url+'?access_token='+k).data.decode('utf-8'))
+                r = json.loads(http.request('GET',endpoint+url+'?access_token='+k+params).data.decode('utf-8'))
             else:
-                r = http.request('GET',endpoint+url+'?access_token='+k).data
+                r = http.request('GET',endpoint+url+'?access_token='+k+params).data
             return r
         time.sleep(1)
     else:
@@ -255,8 +255,20 @@ def add_object_from_thingiverse(thingiid,file_list = None):
 
     objeto.save()
 
-
-
+def add_objects(max_things,start_page=0):
+    #Funcion para popular la base de datos
+    thing_counter = 0
+    page_counter = start_page
+    while thing_counter < max_things:
+        page_counter += 1
+        r = request_from_thingi('/popular',False,'&page={}'.format(page_counter))
+        for item in r:
+            try:
+                add_object_from_thingiverse(item['id'])
+                thing_counter += 1
+            except:
+                print('Error al agregar objeto: {}'.format(id))
+        print('Contador: {}'.format(thing_counter))
 
 
 
