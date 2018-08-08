@@ -1,4 +1,4 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer
+from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer
 from db.models import Objeto, Tag, Categoria
 from rest_framework import generics, status
 from rest_framework.views import APIView
@@ -8,6 +8,12 @@ from django.http import Http404
 from .tools import import_from_thingi
 import json
 import traceback
+
+class UserTest(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+
+    def get_object(self):
+        return self.request.user
 
 '''
 Query view

@@ -4,6 +4,7 @@ from django.utils import timezone
 from .tools import import_from_thingi
 import uuid
 import datetime
+from django.contrib.auth.models import User
 
 '''
 Modelos internos (almacenados en la DB)
@@ -118,13 +119,11 @@ class Objeto(models.Model):
 
 class Usuario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    username = models.EmailField()
-    password = models.CharField(max_length=300)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     liked_objects = models.ManyToManyField(Objeto)
     address = models.CharField(max_length=300)
 
-    def __str__(self):
-        return self.username
+
 
 class ObjetoPersonalizado(models.Model):
     objeto = models.ForeignKey(Objeto,on_delete=models.PROTECT)

@@ -37,7 +37,7 @@ class ObjetoAdmin(admin.ModelAdmin):
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
-    list_display = ('username',)
+    list_display = ('user',)
 
 @admin.register(ObjetoPersonalizado)
 class ObjetoPersonalizadoAdmin(admin.ModelAdmin):
