@@ -8,7 +8,9 @@ from django.http import Http404
 from .tools import import_from_thingi
 import json
 import traceback
-
+# Auth
+from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
+from rest_auth.registration.views import SocialLoginView
 
 '''
 Query view
@@ -135,6 +137,9 @@ class AddObjectFromThingiverse(APIView):
             return Response(ObjetoThingiSerializer(obj).data)
         return Response(serializer.errors)
 
+
+class FacebookLogin(SocialLoginView):
+    adapter_class = FacebookOAuth2Adapter
 
 '''
 class UserTest(generics.RetrieveAPIView):

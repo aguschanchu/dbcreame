@@ -5,6 +5,8 @@ from .tools import import_from_thingi
 import uuid
 import datetime
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 '''
 Modelos internos (almacenados en la DB)
@@ -117,13 +119,25 @@ class Objeto(models.Model):
     def view_main_image(self):
         return mark_safe('<img src="{}" width="400" height="300" />'.format(self.main_image.url))
 
+'''
+Modelos de usuarios/compras
+'''
+
 class Usuario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     liked_objects = models.ManyToManyField(Objeto)
     address = models.CharField(max_length=300)
 
+#Utilizados para actualizar el Usuario al cambiar el User de Django
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Usuario.objects.create(user=instance)
 
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.usuario.save()
 
 class ObjetoPersonalizado(models.Model):
     objeto = models.ForeignKey(Objeto,on_delete=models.PROTECT)
