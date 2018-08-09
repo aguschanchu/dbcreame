@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, AnonymousUser
 
 
 class ObjetoSerializer(serializers.ModelSerializer):
@@ -8,7 +8,11 @@ class ObjetoSerializer(serializers.ModelSerializer):
     #images = serializers.SlugRelatedField(many=True, read_only=True,slug_field='name')
 
     def liked_get(self,obj):
-        return self.context['request'].user.usuario.liked_objects.filter(pk=obj.id).exists()
+        print(self.context['request'].user)
+        if self.context['request'].user.is_authenticated:
+            return self.context['request'].user.usuario.liked_objects.filter(pk=obj.id).exists()
+        else:
+            return False
     liked = serializers.SerializerMethodField('liked_get')
 
     class Meta:
@@ -26,12 +30,12 @@ class ObjetoThingiSerializer(serializers.ModelSerializer):
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ('name', )
+        fields = '__all__'
 
 class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
-        fields = ('name', )
+        fields = '__all__'
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

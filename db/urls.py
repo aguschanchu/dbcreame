@@ -12,6 +12,6 @@ urlpatterns = [
     path('list/category', views.ListAllCategoriesView.as_view()),
     path('list/tag', views.ListAllTagsView.as_view()),
     path('tools/add_object_from_thingiverse/',views.AddObjectFromThingiverse.as_view()),
+    path('update/like/<uuid:id>/',views.ToggleLike.as_view()),
     path('rest-auth/', include('rest_auth.urls')),
-    path('test',views.UserTest.as_view()),
 ]
