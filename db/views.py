@@ -160,7 +160,7 @@ class GoogleLogin(SocialLoginView):
 
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
-    callback_url = getattr(settings, 'SOCIAL_LOGIN_GOOGLE_CALLBACK_URL', 'localhost:8000')
+    callback_url = 'http://127.0.0.1:8000/db/accounts/google/login/callback/'
 
 '''
 class UserTest(generics.RetrieveAPIView):
