@@ -10,7 +10,10 @@ import json
 import traceback
 # Auth
 from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from rest_auth.registration.views import SocialLoginView
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from django.conf import settings
 
 '''
 Query view
@@ -140,6 +143,24 @@ class AddObjectFromThingiverse(APIView):
 
 class FacebookLogin(SocialLoginView):
     adapter_class = FacebookOAuth2Adapter
+
+
+class GoogleLogin(SocialLoginView):
+    """Google OAuth login endpoint
+
+    POST parameter `code` should contain the access code provided by Google OAuth backend,
+    which the backend uses in turn to fetch user data from the Google authentication backend.
+
+    POST parameter `access_token` might not function with this function.
+
+    Requires `callback_url` to be properly set in the configuration, this is of format:
+
+        callback_url = https://{domain}/accounts/google/login/callback/
+    """
+
+    adapter_class = GoogleOAuth2Adapter
+    client_class = OAuth2Client
+    callback_url = getattr(settings, 'SOCIAL_LOGIN_GOOGLE_CALLBACK_URL', 'localhost:8000')
 
 '''
 class UserTest(generics.RetrieveAPIView):

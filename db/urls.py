@@ -30,5 +30,6 @@ path('tools/add_object_from_thingiverse/',views.AddObjectFromThingiverse.as_view
 urlpatterns += [
 path('rest-auth/', include('rest_auth.urls')),
 url(r'^rest-auth/registration/', include('rest_auth.registration.urls')),
-url(r'^rest-auth/facebook/$', views.FacebookLogin.as_view(), name='fb_login')
+url(r'^rest-auth/facebook/$', views.FacebookLogin.as_view(), name='fb_login'),
+url(r'^rest-auth/google/$', views.GoogleLogin.as_view(), name='gg_login'),
 ]
