@@ -140,11 +140,13 @@ def save_user_profile(sender, instance, **kwargs):
     instance.usuario.save()
 
 class ObjetoPersonalizado(models.Model):
-    objeto = models.ForeignKey(Objeto,on_delete=models.PROTECT)
+    object_id = models.ForeignKey(Objeto,on_delete=models.PROTECT)
     color = models.CharField(max_length=100,default='white')
-    #A partir de la escala y el objeto, podemos calcular las dimensiones
-    scale = models.FloatField(default=1)
-    weight_default = models.FloatField(default=10)
+    scale = models.FloatField(blank=True,default=1)
+    quantity = models.IntegerField(blank=True,default=1)
+
+    def name(self):
+        return self.object_id.name
 
 class Compra(models.Model):
     estados = (
@@ -153,6 +155,7 @@ class Compra(models.Model):
         ('shipped', 'Enviado'),
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    buyer = models.ForeignKey(Usuario,on_delete=models.CASCADE)
     purchased_objects = models.ManyToManyField(ObjetoPersonalizado)
     date = models.DateTimeField(default=datetime.datetime.now)
     status = models.CharField(choices=estados,max_length=300)

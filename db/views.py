@@ -1,5 +1,5 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer
-from db.models import Objeto, Tag, Categoria
+from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer, CompraSerializer
+from db.models import Objeto, Tag, Categoria, Compra
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -16,7 +16,7 @@ from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from django.conf import settings
 
 '''
-Query view
+Query views
 '''
 
 class CategoryView(generics.ListAPIView):
@@ -78,8 +78,15 @@ class ListAllTagsView(generics.ListAPIView):
     def get_queryset(self):
         return Tag.objects.all()
 
+class ListAllOrdersView(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CompraSerializer
+
+    def get_queryset(self):
+        return Compra.objects.filter(buyer=self.request.user.usuario)
+
 '''
-Operations view
+Operations views
 '''
 
 class ObjectView(generics.RetrieveAPIView):
@@ -140,6 +147,9 @@ class AddObjectFromThingiverse(APIView):
             return Response(ObjetoThingiSerializer(obj).data)
         return Response(serializer.errors)
 
+'''
+Social login views
+'''
 
 class FacebookLogin(SocialLoginView):
     adapter_class = FacebookOAuth2Adapter

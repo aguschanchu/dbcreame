@@ -16,7 +16,8 @@ path('query/name/<str:name>/', views.NameView.as_view())
 urlpatterns += [
 path('list/object', views.ListAllObjectsView.as_view()),
 path('list/category', views.ListAllCategoriesView.as_view()),
-path('list/tag', views.ListAllTagsView.as_view())
+path('list/tag', views.ListAllTagsView.as_view()),
+path('list/orders', views.ListAllOrdersView.as_view())
 ]
 #Operations
 urlpatterns += [

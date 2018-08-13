@@ -41,7 +41,7 @@ class UsuarioAdmin(admin.ModelAdmin):
 
 @admin.register(ObjetoPersonalizado)
 class ObjetoPersonalizadoAdmin(admin.ModelAdmin):
-    list_display = ('objeto','color','scale')
+    list_display = ('object_id','color','scale','quantity')
 
 @admin.register(Compra)
 class CompraAdmin(admin.ModelAdmin):

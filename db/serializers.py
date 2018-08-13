@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario
+from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra
 from django.contrib.auth.models import User, AnonymousUser
 
 
@@ -41,3 +41,19 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('username',)
+
+'''
+Definimos el serializador de Compra con un poco mas de cuidado, para poder serializar
+en forma nesteada una compra; simplificando la creacion de estas.
+'''
+
+class ObjetoPersonalizadoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ObjetoPersonalizado
+        fields = ('name','object_id','color','scale','quantity')
+
+class CompraSerializer(serializers.ModelSerializer):
+    purchased_objects = ObjetoPersonalizadoSerializer(many=True)
+    class Meta:
+        model = Compra
+        fields = ('id','buyer','purchased_objects','date','status','delivery_address','payment_method')
