@@ -2,3 +2,4 @@ migrations
 *.pyc
 *.stl
 media
+tmp

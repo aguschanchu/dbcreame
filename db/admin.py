@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL
+from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR
 
 @admin.register(Autor)
 class AutorAdmin(admin.ModelAdmin):
@@ -31,13 +31,17 @@ class ReferenciaExternaAdmin(admin.ModelAdmin):
 @admin.register(Objeto)
 class ObjetoAdmin(admin.ModelAdmin):
     list_display = ('name','author','external_id')
-    raw_id_fields = ('author',)
+    raw_id_fields = ('author','ar_model')
     filter_horizontal = ('category','tags','files')
     readonly_fields = ['view_main_image']
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
     list_display = ('user',)
+
+@admin.register(ModeloAR)
+class UsuarioAdmin(admin.ModelAdmin):
+    list_display = ('combined_stl','sfb_file')
 
 @admin.register(ObjetoPersonalizado)
 class ObjetoPersonalizadoAdmin(admin.ModelAdmin):
@@ -46,10 +50,6 @@ class ObjetoPersonalizadoAdmin(admin.ModelAdmin):
 @admin.register(Compra)
 class CompraAdmin(admin.ModelAdmin):
     list_display = ('date','status')
-
-'''@admin.register(Album)
-class AlbumAdmin(admin.ModelAdmin):
-    readonly_fields = ['imagen_principal']'''
 
 @admin.register(Imagen)
 class ImagenAdmin(admin.ModelAdmin):

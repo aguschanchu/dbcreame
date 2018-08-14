@@ -24,6 +24,7 @@ class Autor(models.Model):
 '''
 Clases accesorias
 '''
+
 class Categoria(models.Model):
     name = models.CharField(max_length=100,unique=True)
 
@@ -81,6 +82,21 @@ class ArchivoSTL(models.Model):
     def name(self):
         return self.file.name
 
+#Contiene los archivos necesarios para la visualizacion AR de cada Objeto
+class ModeloAR(models.Model):
+    combined_stl = models.FileField(upload_to='stl/',blank=True,null=True)
+    sfb_file = models.FileField(upload_to='sfb/',blank=True,null=True)
+
+    #Si el modelo tiene un unico objeto, el STL combinado, es el mismo
+    def check_for_single_object_file(self):
+        if len(self.objeto.files.all()) == 1:
+            self.combined_stl = self.objeto.files.all()[0]
+
+
+
+
+
+
 '''
 Clase de referencia externa. La idea es asignar id_externa al identificador que se utiliza en el repositorio indicado
 '''
@@ -88,7 +104,7 @@ Clase de referencia externa. La idea es asignar id_externa al identificador que 
 repositorios = (
     ('thingiverse', 'Thingiverse'),
     ('youmagine', 'YouMagine'),
-    ('externo', 'Extero (archivo propio)'),
+    ('externo', 'Externo (archivo propio)'),
 )
 
 class ReferenciaExterna(models.Model):
@@ -110,7 +126,7 @@ class Objeto(models.Model):
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
     creation_date = models.DateTimeField(default=timezone.now)
     category = models.ManyToManyField(Categoria)
-    #No estoy 100% seguro de que esta sea la mejor implementacion para los tags. En particular, por la busqueda
+    ar_model = models.OneToOneField(ModeloAR, on_delete=models.CASCADE)
     tags = models.ManyToManyField(Tag)
     external_id = models.ForeignKey(ReferenciaExterna,on_delete=models.SET_NULL,null=True)
     #Se muestra en el catalogo?
