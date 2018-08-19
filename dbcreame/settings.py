@@ -131,6 +131,8 @@ USE_TZ = True
 
 SITE_ID = 1
 
+ADMIN_SITE_HEADER = "NoName DB Administration"
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',

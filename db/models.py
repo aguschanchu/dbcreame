@@ -178,9 +178,9 @@ class Objeto(models.Model):
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
     creation_date = models.DateTimeField(default=timezone.now)
     category = models.ManyToManyField(Categoria)
-    ar_model = models.OneToOneField(ModeloAR, on_delete=models.CASCADE)
+    ar_model = models.OneToOneField(ModeloAR, on_delete=models.CASCADE,null=True)
     tags = models.ManyToManyField(Tag)
-    external_id = models.ForeignKey(ReferenciaExterna,on_delete=models.SET_NULL,null=True)
+    external_id = models.OneToOneField(ReferenciaExterna,on_delete=models.SET_NULL,null=True)
     #Se muestra en el catalogo?
     hidden = models.BooleanField(default=False)
 
