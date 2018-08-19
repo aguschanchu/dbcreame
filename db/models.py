@@ -1,12 +1,19 @@
 from django.db import models
 from django.utils.safestring import mark_safe
 from django.utils import timezone
+from django.core.files import File
+from django.core.files.base import ContentFile
 from .tools import import_from_thingi
+from .tools import stl_to_sfb
 import uuid
 import datetime
+import os
+import shutil
+import trimesh
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.conf import settings
 
 '''
 Modelos internos (almacenados en la DB)
@@ -82,18 +89,63 @@ class ArchivoSTL(models.Model):
     def name(self):
         return self.file.name
 
-#Contiene los archivos necesarios para la visualizacion AR de cada Objeto
+#Contiene losfrom django.dispatch import receiver archivos necesarios para la visualizacion AR de cada Objeto
 class ModeloAR(models.Model):
     combined_stl = models.FileField(upload_to='stl/',blank=True,null=True)
+    #El combinado fue revisado por un humano?
+    human_flag = models.BooleanField(blank=True,default=False)
     sfb_file = models.FileField(upload_to='sfb/',blank=True,null=True)
+
+    def image_render(self):
+        return self.modeloarrender.image_render
 
     #Si el modelo tiene un unico objeto, el STL combinado, es el mismo
     def check_for_single_object_file(self):
         if len(self.objeto.files.all()) == 1:
-            self.combined_stl = self.objeto.files.all()[0]
+            self.combined_stl = self.objeto.files.all()[0].file
+            self.human_flag = True
+            self.save()
+            return True
+        else:
+            return False
 
+    def arrange_and_combine_files(self):
+        res = stl_to_sfb.combine_stls_files(self.objeto)
+        self.combined_stl.save(self.objeto.name+'.stl',File(open(res+'/plate00.stl','rb')))
+        shutil.rmtree(res)
 
+    def create_sfb(self,generate=False):
+        if not self.combined_stl.name:
+            #No tenemos STL combinado. Intentamos generarlo?
+            if generate:
+                if not self.check_for_single_object_file():
+                    self.arrange_and_combine_files()
+            else:
+                return False
+        sfb_path = stl_to_sfb.convert(self.combined_stl)
+        self.sfb_file.save(sfb_path.split('/')[-1],File(open(sfb_path,'rb')))
+        os.remove(sfb_path)
 
+class ModeloARRender(models.Model):
+    image_render = models.FileField(upload_to='renders/',blank=True,null=True)
+    model_ar = models.OneToOneField(ModeloAR, on_delete=models.CASCADE)
+
+    def create_render(self):
+        if not self.model_ar.combined_stl.name:
+            return False
+        mesh = trimesh.load_mesh(settings.BASE_DIR+self.model_ar.combined_stl.url)
+        self.image_render.save(self.model_ar.combined_stl.name.split('.')[0],ContentFile(mesh.scene().save_image()))
+
+#Utilizados para actualizar el render al cambiar el ModeloAR
+@receiver(post_save, sender=ModeloAR)
+def create_modeloar_render(sender, instance, created, **kwargs):
+    if created:
+        ModeloARRender.objects.create(model_ar=instance)
+
+@receiver(post_save, sender=ModeloAR)
+def save_modeloar_render(sender, instance, **kwargs):
+    instance.modeloarrender.create_render()
+    instance.modeloarrender.save()
 
 
 

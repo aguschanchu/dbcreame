@@ -1,5 +1,7 @@
 from django.contrib import admin
 from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR
+from django.utils.html import format_html_join, format_html
+import trimesh
 
 @admin.register(Autor)
 class AutorAdmin(admin.ModelAdmin):
@@ -40,8 +42,38 @@ class UsuarioAdmin(admin.ModelAdmin):
     list_display = ('user',)
 
 @admin.register(ModeloAR)
-class UsuarioAdmin(admin.ModelAdmin):
-    list_display = ('combined_stl','sfb_file')
+class ModelARAdmin(admin.ModelAdmin):
+    list_display = ('name','combined_stl','sfb_file','human_flag')
+    list_filter = ('human_flag',)
+    readonly_fields = ('file_list', 'name','image')
+
+    fieldsets = (
+        (None, {
+            'fields': (('combined_stl','human_flag'),)
+        }),
+        ('Lista de archivos', {
+            'classes': ('extrapretty',),
+            'fields': (('file_list','image'),)
+        }),
+        ('Modelos AR', {
+            'classes': ('collapse',),
+            'fields': ('sfb_file',),
+        })
+    )
+    def name(self,obj):
+        return obj.objeto.name
+
+    def file_list(self,obj):
+        return format_html_join(
+        '\n', "<li><a href={}> {}</a></li>",
+        ((o.file.url, o.name()) for o in obj.objeto.files.all())
+        )
+
+    def image(self,obj):
+        return format_html('<img src='+obj.modeloarrender.image_render.url+' width="50%" height="50%"></img>')
+
+
+
 
 @admin.register(ObjetoPersonalizado)
 class ObjetoPersonalizadoAdmin(admin.ModelAdmin):

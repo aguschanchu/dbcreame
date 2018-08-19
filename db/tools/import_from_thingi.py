@@ -283,14 +283,7 @@ from db.models import *
 ***REMOVED***
 ***REMOVED***
 ***REMOVED***
-
-add_object_from_thingiverse(1159321)
-objects = [481259,430957,570288,2918926,2995849,3002897,1159321,2829553,2531208]
-for object in objects:
-    add_object_from_thingiverse(object)
-p = QueryPool.objects.create()
-p.keys.add(a)
-p.get_key()
+add_objects(10)
 
 def dowload_thing(thingiid,file_list):
 '''
