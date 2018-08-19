@@ -1,6 +1,6 @@
 from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer, CompraSerializer
 from db.models import Objeto, Tag, Categoria, Compra
-from rest_framework import generics, status
+from rest_framework import generics, status, pagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
@@ -16,11 +16,19 @@ from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from django.conf import settings
 
 '''
+Pagination classes
+'''
+class ObjectPagination(pagination.CursorPagination):
+    page_size = 10
+    ordering = 'creation_date'
+
+'''
 Query views
 '''
 
 class CategoryView(generics.ListAPIView):
     serializer_class = ObjetoSerializer
+    pagination_class = ObjectPagination
     lookup_url_kwarg = 'category'
 
     def get_queryset(self):
@@ -30,6 +38,7 @@ class CategoryView(generics.ListAPIView):
 
 class TagView(generics.ListAPIView):
     serializer_class = ObjetoSerializer
+    pagination_class = ObjectPagination
     lookup_url_kwarg = 'tags'
 
     def get_queryset(self):
@@ -50,12 +59,13 @@ class ObjectView(generics.RetrieveAPIView):
 
 class NameView(generics.ListAPIView):
     serializer_class = ObjetoSerializer
+    pagination_class = ObjectPagination
     lookup_url_kwarg = 'name'
 
     def get_queryset(self):
         name = self.kwargs.get(self.lookup_url_kwarg)
         objetos = Objeto.objects.filter(name__contains=name)
-        return objetos
+        return objetosO
 
 '''
 List views
@@ -63,6 +73,7 @@ List views
 
 class ListAllObjectsView(generics.ListAPIView):
     serializer_class = ObjetoSerializer
+    pagination_class = ObjectPagination
     def get_queryset(self):
         return Objeto.objects.all()
 
@@ -171,11 +182,3 @@ class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
     callback_url = 'http://127.0.0.1:8000/db/accounts/google/login/callback/'
-
-'''
-class UserTest(generics.RetrieveAPIView):
-    serializer_class = UserSerializer
-
-    def get_object(self):
-        return self.request.user
-'''
