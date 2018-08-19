@@ -32,10 +32,14 @@ class ReferenciaExternaAdmin(admin.ModelAdmin):
 
 @admin.register(Objeto)
 class ObjetoAdmin(admin.ModelAdmin):
-    list_display = ('name','author','external_id')
+    list_display = ('name','author','external_id','total_printing_time_default')
     raw_id_fields = ('author','ar_model')
     filter_horizontal = ('category','tags','files')
-    readonly_fields = ['view_main_image']
+    readonly_fields = ['view_main_image','total_printing_time_default']
+
+    def total_printing_time_default(self,obj):
+        return int(sum([o.printing_time_default for o in obj.files.all()])/60**2)
+
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
