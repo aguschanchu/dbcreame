@@ -56,39 +56,6 @@ class Polinomio(models.Model):
     def __str__(self):
         return "{} x^5+ {} x^4+ {} x^3+ {} x^2+ {} x+ {}".format(self.a5,self.a4,self.a3,self.a2,self.a1,self.a0)
 
-class Imagen(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    photo = models.ImageField(upload_to='images/')
-
-    def __str__(self):
-        return self.photo.name
-
-    def name(self):
-        return self.photo.name
-
-    def view_image(self):
-        return mark_safe('<img src="{}" width="400" height="300" />'.format(self.photo.url))
-
-class ArchivoSTL(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    file = models.FileField(upload_to='stl/')
-
-    #Tiempo de impresion en escala 1, en segundos
-    printing_time_default = models.IntegerField(default=0)
-    time_as_a_function_of_scale = models.ForeignKey(Polinomio,on_delete=models.SET_NULL,null=True)
-    #Dimensiones del objeto en escala 1, en mm
-    size_x_default = models.FloatField(default=10)
-    size_y_default = models.FloatField(default=10)
-    size_z_default = models.FloatField(default=10)
-    #Peso del objeto en escala 1, en g
-    weight_default = models.FloatField(default=10)
-
-    def __str__(self):
-        return self.file.name
-
-    def name(self):
-        return self.file.name
-
 #Contiene losfrom django.dispatch import receiver archivos necesarios para la visualizacion AR de cada Objeto
 class ModeloAR(models.Model):
     combined_stl = models.FileField(upload_to='stl/',blank=True,null=True)
@@ -173,8 +140,6 @@ class Objeto(models.Model):
     description = models.TextField(blank=True,null=True)
     like_count = models.IntegerField(blank=True,default=0)
     main_image = models.ImageField(upload_to='images/')
-    images = models.ManyToManyField(Imagen)
-    files = models.ManyToManyField(ArchivoSTL)
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
     creation_date = models.DateTimeField(default=timezone.now)
     category = models.ManyToManyField(Categoria)
@@ -186,6 +151,44 @@ class Objeto(models.Model):
 
     def view_main_image(self):
         return mark_safe('<img src="{}" width="400" height="300" />'.format(self.main_image.url))
+
+'''
+Modelos accesorios
+'''
+class ArchivoSTL(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    file = models.FileField(upload_to='stl/')
+    object = models.ForeignKey(Objeto,blank=True,null=True,on_delete=models.CASCADE,related_name='files')
+    #Tiempo de impresion en escala 1, en segundos
+    printing_time_default = models.IntegerField(default=0)
+    time_as_a_function_of_scale = models.ForeignKey(Polinomio,on_delete=models.SET_NULL,null=True)
+    #Dimensiones del objeto en escala 1, en mm
+    size_x_default = models.FloatField(default=10)
+    size_y_default = models.FloatField(default=10)
+    size_z_default = models.FloatField(default=10)
+    #Peso del objeto en escala 1, en g
+    weight_default = models.FloatField(default=10)
+
+    def __str__(self):
+        return self.file.name
+
+    def name(self):
+        return self.file.name
+
+class Imagen(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    photo = models.ImageField(upload_to='images/')
+    object = models.ForeignKey(Objeto,blank=True,null=True,on_delete=models.CASCADE,related_name='images')
+
+    def __str__(self):
+        return self.photo.name
+
+    def name(self):
+        return self.photo.name
+
+    def view_image(self):
+        return mark_safe('<img src="{}" width="400" height="300" />'.format(self.photo.url))
+
 
 '''
 Modelos de usuarios/compras
@@ -232,7 +235,9 @@ class Compra(models.Model):
     payment_method = models.CharField(max_length=300)
 
 '''
-Modelos externos (utilizados para serializar información)
+Modelos externos     object = models.ForeignKey(Objeto,blank=True,null=True,on_delete=models.CASCADE,related_name='images')
+
+    def __str__(self):(utilizados para serializar información)
 '''
 
 class ObjetoThingi(models.Model):

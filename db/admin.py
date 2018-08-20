@@ -30,27 +30,34 @@ class PolinomioAdmin(admin.ModelAdmin):
 class ReferenciaExternaAdmin(admin.ModelAdmin):
     list_display = ('external_id','repository')
 
+class ArchivoSTLInline(admin.TabularInline):
+    model = ArchivoSTL
+
+class ImagenInline(admin.TabularInline):
+    model = Imagen
+
 @admin.register(Objeto)
 class ObjetoAdmin(admin.ModelAdmin):
     list_display = ('name','author','external_id','total_printing_time_default')
     raw_id_fields = ('author','ar_model')
-    filter_horizontal = ('category','tags','files')
+    filter_horizontal = ('category','tags')
     readonly_fields = ['view_main_image','total_printing_time_default']
+    inlines = [ArchivoSTLInline,ImagenInline]
 
     def total_printing_time_default(self,obj):
-        return int(sum([o.printing_time_default for o in obj.files.all()])/60**2)
+        return int(sum([o.printing_time_default for o in ArchivoSTL.objects.filter(object=obj)])/60**2)
 
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
     list_display = ('user',)
 
+
 @admin.register(ModeloAR)
 class ModelARAdmin(admin.ModelAdmin):
     list_display = ('name','combined_stl','sfb_file','human_flag')
     list_filter = ('human_flag',)
-    readonly_fields = ('file_list', 'name','image')
-
+    readonly_fields = ('file_list', 'name','image','combined_stl')
     fieldsets = (
         (None, {
             'fields': (('combined_stl','human_flag'),)
@@ -75,9 +82,6 @@ class ModelARAdmin(admin.ModelAdmin):
 
     def image(self,obj):
         return format_html('<img src='+obj.modeloarrender.image_render.url+' width="50%" height="50%"></img>')
-
-
-
 
 @admin.register(ObjetoPersonalizado)
 class ObjetoPersonalizadoAdmin(admin.ModelAdmin):

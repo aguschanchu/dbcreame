@@ -1,7 +1,16 @@
 from rest_framework import serializers
-from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra
+from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen
 from django.contrib.auth.models import User, AnonymousUser
 
+class ArchivoSTLSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArchivoSTL
+        fields = '__all__'
+
+class ImagenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Imagen
+        fields = '__all__'
 
 class ObjetoSerializer(serializers.ModelSerializer):
     #images = serializers.StringRelatedField(many=True)
@@ -14,6 +23,9 @@ class ObjetoSerializer(serializers.ModelSerializer):
         else:
             return False
     liked = serializers.SerializerMethodField('liked_get')
+
+    files = ArchivoSTLSerializer(many=True)
+    images = ImagenSerializer(many=True)
 
     class Meta:
         depth = 4

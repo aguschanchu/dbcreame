@@ -269,16 +269,20 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     objeto.ar_model = modelo_ar
     objeto.main_image.save(main_image_name,main_image)
 
-    for imagen in imagenes:
-        objeto.images.add(imagen)
-    for archivo in archivos:
-        objeto.files.add(archivo)
     for categoria in categorias:
         objeto.category.add(categoria)
     for tag in tags:
         objeto.tags.add(tag)
 
     objeto.save()
+
+    #Linkeamos los ForeignKey antes creados al objeto creado
+    for imagen in imagenes:
+        imagen.object = objeto
+        imagen.save()
+    for archivo in archivos:
+        archivo.object = objeto
+        archivo.save()
 
 def add_objects(max_things,start_page=0):
     #Funcion para popular la base de datos
