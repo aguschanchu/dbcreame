@@ -181,7 +181,7 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
                         print(thing_file)
                         raise ValueError("Error al descargar archivo")
                     archivo = modelos.ArchivoSTL()
-                    archivo.file.save(name,ContentFile(rfile_src))
+                    archivo.file.save(referencia_externa.repository+':'+str(referencia_externa.external_id)+name,ContentFile(rfile_src))
                     archivos.append(archivo)
     ### Tenemos los archivos descargados. Necesitamos completar su tiempo de imp, peso, dimensiones
     print("Ejecutando trabajos de sliceo")
@@ -198,6 +198,7 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
         slicer_jobs_ids[archivo] = rf.json()['id']
         slicer_jobs_ids_poly[archivo] = rfp.json()['id']
     ### Esperamos 600s a que haga todos los trabajos
+    print("Trabajos inicializados")
     poly_f, slice_f = False, False
     for _ in range(0,600):
         if debug and _%60==0:
@@ -206,7 +207,7 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
         if not poly_f:
             for job_id in slicer_jobs_ids_poly.values():
                 estado = requests.get(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/status/{}/'.format(job_id)).json()['estado']
-                if debug and _%30==0:
+                if debug and _%60==0:
                     print("          {}                      {}".format(job_id,estado))
                 if int(estado) >= 300:
                     print("Hubo un error de sliceo, el identificador de trabajo es {}, con estado {}".format(job_id,estado))
@@ -219,7 +220,7 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
         if not slice_f:
             for job_id in slicer_jobs_ids.values():
                 estado = requests.get(settings.SLICER_API_ENDPOINT+'status/{}/'.format(job_id)).json()['estado']
-                if debug and _%30==0:
+                if debug and _%60==0:
                     print("          {}                      {}".format(job_id,estado))
                 if int(estado) >= 300:
                     print("Hubo un error de sliceo, el identificador de trabajo es {}, con estado {}".format(job_id,estado))
@@ -264,9 +265,6 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     objeto.name = r['name']
     objeto.description = r['description']
     objeto.external_id = referencia_externa
-    modelo_ar = modelos.ModeloAR()
-    modelo_ar.save()
-    objeto.ar_model = modelo_ar
     objeto.main_image.save(main_image_name,main_image)
 
     for categoria in categorias:
@@ -283,6 +281,15 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     for archivo in archivos:
         archivo.object = objeto
         archivo.save()
+
+    modelo_ar = modelos.ModeloAR()
+    modelo_ar.object = objeto
+    modelo_ar.save()
+
+    #Preparamos el modelo AR
+    modelo_ar.create_sfb(generate=True)
+    modelo_ar.save()
+
 
 def add_objects(max_things,start_page=0):
     #Funcion para popular la base de datos

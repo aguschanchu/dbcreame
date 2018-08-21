@@ -25,7 +25,7 @@ SECRET_KEY = '***REMOVED***'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1']
+ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1','192.168.1.2']
 
 
 # Application definition

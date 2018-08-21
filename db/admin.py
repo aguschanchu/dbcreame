@@ -32,41 +32,30 @@ class ReferenciaExternaAdmin(admin.ModelAdmin):
 
 class ArchivoSTLInline(admin.TabularInline):
     model = ArchivoSTL
+    verbose_name = "Modelos STL"
+    verbose_name_plural = verbose_name
+    classes = ['collapse','extrapretty']
 
 class ImagenInline(admin.TabularInline):
     model = Imagen
+    verbose_name = "Imagenes"
+    verbose_name_plural = verbose_name
+    classes = ['collapse']
 
-@admin.register(Objeto)
-class ObjetoAdmin(admin.ModelAdmin):
-    list_display = ('name','author','external_id','total_printing_time_default')
-    raw_id_fields = ('author','ar_model')
-    filter_horizontal = ('category','tags')
-    readonly_fields = ['view_main_image','total_printing_time_default']
-    inlines = [ArchivoSTLInline,ImagenInline]
-
-    def total_printing_time_default(self,obj):
-        return int(sum([o.printing_time_default for o in ArchivoSTL.objects.filter(object=obj)])/60**2)
-
-
-@admin.register(Usuario)
-class UsuarioAdmin(admin.ModelAdmin):
-    list_display = ('user',)
-
-
-@admin.register(ModeloAR)
-class ModelARAdmin(admin.ModelAdmin):
+class ModelARInline(admin.StackedInline):
+    model = ModeloAR
+    verbose_name = "Modelo AR"
+    verbose_name_plural = verbose_name
+    fk = "object"
     list_display = ('name','combined_stl','sfb_file','human_flag')
     list_filter = ('human_flag',)
-    readonly_fields = ('file_list', 'name','image','combined_stl')
+    readonly_fields = ('name','image','combined_stl')
+
     fieldsets = (
         (None, {
-            'fields': (('combined_stl','human_flag'),)
+            'fields': (('combined_stl','human_flag'),'image')
         }),
-        ('Lista de archivos', {
-            'classes': ('extrapretty',),
-            'fields': (('file_list','image'),)
-        }),
-        ('Modelos AR', {
+        ('Archivos', {
             'classes': ('collapse',),
             'fields': ('sfb_file',),
         })
@@ -74,14 +63,51 @@ class ModelARAdmin(admin.ModelAdmin):
     def name(self,obj):
         return obj.objeto.name
 
-    def file_list(self,obj):
-        return format_html_join(
-        '\n', "<li><a href={}> {}</a></li>",
-        ((o.file.url, o.name()) for o in obj.objeto.files.all())
+    def image(self,obj):
+        return format_html('<img src='+obj.modeloarrender.image_render.url+' width="40%" height="40%"></img>')
+
+
+@admin.register(Objeto)
+class ObjetoAdmin(admin.ModelAdmin):
+    list_display = ('name','author','external_id','total_printing_time_default','human_flag')
+    raw_id_fields = ('author',)
+    filter_horizontal = ('category','tags')
+    readonly_fields = ['view_main_image','total_printing_time_default']
+    inlines = [ArchivoSTLInline,ImagenInline,ModelARInline]
+    fieldsets = (
+            (None, {
+                'fields': ('name',)
+                }),
+            (None, {
+                'fields': ('view_main_image',('author','like_count','total_printing_time_default','hidden'))
+                }),
+            ('Descripcion', {
+                'fields': ('description',),
+                'classes': ('collapse',)
+                }),
+            ('Categorias y tags', {
+                'fields': ('category','tags'),
+                'classes': ('collapse',)
+                }),
+            ('Referencia externa', {
+                'fields': ('external_id',),
+                'classes': ('collapse',)
+                })
         )
 
-    def image(self,obj):
-        return format_html('<img src='+obj.modeloarrender.image_render.url+' width="50%" height="50%"></img>')
+    def total_printing_time_default(self,obj):
+        return int(sum([o.printing_time_default for o in ArchivoSTL.objects.filter(object=obj)])/60**2)
+
+    def human_flag(self,obj):
+        return obj.modeloar.human_flag
+
+    human_flag.boolean = True
+
+
+@admin.register(Usuario)
+class UsuarioAdmin(admin.ModelAdmin):
+    list_display = ('user',)
+
 
 @admin.register(ObjetoPersonalizado)
 class ObjetoPersonalizadoAdmin(admin.ModelAdmin):

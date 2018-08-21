@@ -5,6 +5,8 @@ import numpy as np
 import trimesh
 import os
 import traceback
+from django.core.files.base import ContentFile
+import random, string
 
 def convert(fieldfile):
     '''
@@ -55,6 +57,7 @@ def combine_stls_files(objeto):
         args_d = args.copy() + ['--dryrun','-x',str(build_plate_size),'-y',str(build_plate_size),'--spacing',str(10)]
         proc = subprocess.run(args_d,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
         #Entro todo?
+
         print(build_plate_size)
         for line in proc.stdout.splitlines():
             print(line)
@@ -65,7 +68,22 @@ def combine_stls_files(objeto):
                 build_plate_size += 50
                 break
         else:
-            args_d = args.copy() + ['-x',str(build_plate_size),'-y',str(build_plate_size),'--spacing',str(10),'--outputdir',settings.BASE_DIR+'/tmp/'+str(objeto.name)+'/']
-            os.mkdir(settings.BASE_DIR+'/tmp/'+str(objeto.name))
-            proc = subprocess.run(args_d,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE,cwd=settings.BASE_DIR+'/tmp/'+str(objeto.name)+'/')
-            return settings.BASE_DIR+'/tmp/'+str(objeto.name)
+            dir = settings.BASE_DIR+'/tmp/'+''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            args_d = args.copy() + ['-x',str(build_plate_size),'-y',str(build_plate_size),'--spacing',str(10),'--outputdir',dir+'/']
+            os.mkdir(dir)
+            proc = subprocess.run(args_d,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE,cwd=dir+'/')
+            return dir
+
+def combine_stl_with_correct_coordinates(objeto):
+    '''
+    Una vez que los archivos tienen un sistema coordenado en comun, unimos los archivos para generar el
+    STL cominado
+    '''
+    meshes = [trimesh.load_mesh(settings.BASE_DIR + a.file.url) for a in objeto.object.files.all()]
+    mesh = trimesh.util.concatenate(meshes)
+    filename = objeto.object.name
+    #Borramos el archivo anterior
+    objeto.combined_stl.delete()
+    objeto.combined_stl.save(filename+'.stl',ContentFile(trimesh.io.stl.export_stl(mesh)),save=False)
+    #Ejecutamos la funcion de guardar a parte, para que evitar un loop infinito con los signals
+    objeto.save(update_fields=['combined_stl'])
