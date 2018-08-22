@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen
+from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR
 from django.contrib.auth.models import User, AnonymousUser
 
 class ArchivoSTLSerializer(serializers.ModelSerializer):
@@ -10,7 +10,12 @@ class ArchivoSTLSerializer(serializers.ModelSerializer):
 class ImagenSerializer(serializers.ModelSerializer):
     class Meta:
         model = Imagen
-        fields = '__all__'
+        fields = ('photo',)
+
+class ModeloArSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModeloAR
+        fields = ('combined_stl','human_flag','sfb_file')
 
 class ObjetoSerializer(serializers.ModelSerializer):
     #images = serializers.StringRelatedField(many=True)
@@ -26,13 +31,14 @@ class ObjetoSerializer(serializers.ModelSerializer):
 
     files = ArchivoSTLSerializer(many=True)
     images = ImagenSerializer(many=True)
+    modeloar = ModeloArSerializer()
 
     class Meta:
         depth = 4
         model = Objeto
-        fields = ('id', 'name', 'description', 'like_count', 'main_image', 'images',
+        fields = ('id', 'name', 'name_es', 'description', 'like_count', 'main_image', 'images',
          'files', 'author', 'creation_date', 'category', 'tags', 'external_id', 'liked',
-         'hidden')
+         'hidden','modeloar')
 
 class ObjetoThingiSerializer(serializers.ModelSerializer):
     class Meta:

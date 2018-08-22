@@ -14,6 +14,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
+from google.cloud import translate
 
 '''
 Modelos internos (almacenados en la DB)
@@ -34,15 +35,33 @@ Clases accesorias
 
 class Categoria(models.Model):
     name = models.CharField(max_length=100,unique=True)
+    name_es = models.CharField(max_length=100,blank=True,null=True)
 
     def __str__(self):
         return self.name
+
+    def translate_es(self,translate_client=None,force=False):
+        if self.name_es == None or force:
+            if translate_client == None:
+                translate_client = translate.Client()
+            translation = translate_client.translate(self.name,source_language='en',target_language='es')
+            self.name_es = translation['translatedText']
+            self.save()
 
 class Tag(models.Model):
     name = models.CharField(max_length=300,unique=True)
+    name_es = models.CharField(max_length=300,blank=True,null=True)
 
     def __str__(self):
         return self.name
+
+    def translate_es(self,translate_client=None,force=False):
+        if self.name_es == None or force:
+            if translate_client == None:
+                translate_client = translate.Client()
+            translation = translate_client.translate(self.name,source_language='en',target_language='es')
+            self.name_es = translation['translatedText']
+            self.save()
 
 class Polinomio(models.Model):
     #Polinomio en forma p(x) = \sum^0_{n=0} a_n x^n
@@ -78,6 +97,7 @@ class ReferenciaExterna(models.Model):
 class Objeto(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=300)
+    name_es = models.CharField(max_length=300,null=True,blank=True)
     description = models.TextField(blank=True,null=True)
     like_count = models.IntegerField(blank=True,default=0)
     main_image = models.ImageField(upload_to='images/')
@@ -92,6 +112,13 @@ class Objeto(models.Model):
     def view_main_image(self):
         return mark_safe('<img src="{}" width="400" height="300" />'.format(self.main_image.url))
 
+    def translate_es(self,translate_client=None,force=False):
+        if self.name_es == None or force:
+            if translate_client == None:
+                translate_client = translate.Client()
+            translation = translate_client.translate(self.name,source_language='en',target_language='es')
+            self.name_es = translation['translatedText']
+            self.save()
 '''
 Modelos accesorios
 '''
@@ -146,14 +173,15 @@ class ModeloAR(models.Model):
         if len(self.object.files.all()) == 1:
             self.combined_stl = self.object.files.all()[0].file
             self.human_flag = True
-            self.save()
+            self.save(update_fields=['combined_stl'])
             return True
         else:
             return False
 
     def arrange_and_combine_files(self):
         res = stl_to_sfb.combine_stls_files(self.object)
-        self.combined_stl.save(self.object.name+'.stl',File(open(res+'/plate00.stl','rb')))
+        self.combined_stl.save(self.object.name+'.stl',File(open(res+'/plate00.stl','rb')),save=False)
+        self.save(update_fields=['combined_stl'])
         shutil.rmtree(res)
 
     def combine_stl(self):
@@ -191,7 +219,7 @@ def create_modeloar_render(sender, instance, created, **kwargs):
 @receiver(post_save, sender=ModeloAR)
 def update_render_and_model(sender, instance, update_fields, **kwargs):
     #Lo reviso un humano? Lo actualizamos al STL combinado de ser asi
-    if instance.human_flag and len(instance.object.files.all()) > 1 and update_fields == None:
+    if instance.human_flag and update_fields == None:
         instance.combine_stl()
         instance.create_sfb()
     instance.modeloarrender.create_render()

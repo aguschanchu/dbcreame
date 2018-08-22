@@ -123,12 +123,18 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     ### Veamos que categorias existen, en la DB. Las que no, las creamos.
     for cat in get_thing_categories_list(thingiid):
         categorias.append(modelos.Categoria.objects.get_or_create(name=cat)[0])
+    ### Pedimos que traduzca las categorias. Si ya existia, no pasa nada, ya que se ejecuta solo si no fue traducida
+    for cat in categorias:
+        cat.translate_es()
     ## Tags
     rtag = request_from_thingi('things/{}/tags'.format(thingiid))
     tags = []
     ### Veamos que categorias existen, en la DB. Las que no, las creamos.
     for tag in rtag:
         tags.append(modelos.Tag.objects.get_or_create(name=tag['name'])[0])
+    ### Traduccion de tags
+    for tag in tags:
+        tag.translate_es()
     ## Imagenes
     print("Descargando imagenes")
     rimg = request_from_thingi('things/{}/images'.format(thingiid))
@@ -181,7 +187,7 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
                         print(thing_file)
                         raise ValueError("Error al descargar archivo")
                     archivo = modelos.ArchivoSTL()
-                    archivo.file.save(referencia_externa.repository+':'+str(referencia_externa.external_id)+name,ContentFile(rfile_src))
+                    archivo.file.save(referencia_externa.repository+'-'+str(referencia_externa.external_id)+'-'+name,ContentFile(rfile_src))
                     archivos.append(archivo)
     ### Tenemos los archivos descargados. Necesitamos completar su tiempo de imp, peso, dimensiones
     print("Ejecutando trabajos de sliceo")
@@ -289,6 +295,11 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     #Preparamos el modelo AR
     modelo_ar.create_sfb(generate=True)
     modelo_ar.save()
+
+    #Traducimos el nombre
+    objeto.translate_es()
+    objeto.save()
+
 
 
 def add_objects(max_things,start_page=0):

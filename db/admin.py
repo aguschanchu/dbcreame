@@ -9,7 +9,7 @@ class AutorAdmin(admin.ModelAdmin):
 
 @admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    list_display = ('name','name_es')
     search_fields = ('name',)
 
 @admin.register(ArchivoSTL)
@@ -20,7 +20,7 @@ class ArchivoSTLAdmin(admin.ModelAdmin):
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    list_display = ('name','name_es')
 
 @admin.register(Polinomio)
 class PolinomioAdmin(admin.ModelAdmin):
@@ -76,7 +76,7 @@ class ObjetoAdmin(admin.ModelAdmin):
     inlines = [ArchivoSTLInline,ImagenInline,ModelARInline]
     fieldsets = (
             (None, {
-                'fields': ('name',)
+                'fields': (('name','name_es'),)
                 }),
             (None, {
                 'fields': ('view_main_image',('author','like_count','total_printing_time_default','hidden'))

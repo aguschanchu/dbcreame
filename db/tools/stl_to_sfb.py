@@ -36,7 +36,10 @@ def convert(fieldfile):
     proc = subprocess.run(args,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     os.remove(obj_path)
     #Se proceso correctamente?
-    if 'Wrote SFB to' not in proc.stdout.splitlines()[1]:
+    for line in proc.stdout.splitlines():
+        if 'Wrote SFB to' in line:
+            break
+    else:
         raise Exception("Error al exportar SFB")
     #Devolvemos el path del sfb
     return settings.BASE_DIR + '/tmp/' + fieldfile.name.split('/')[-1].split('.')[0] + '.sfb'
