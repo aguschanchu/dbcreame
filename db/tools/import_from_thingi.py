@@ -294,7 +294,6 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
 
     #Preparamos el modelo AR
     modelo_ar.create_sfb(generate=True)
-    modelo_ar.save()
 
     #Traducimos el nombre
     objeto.translate_es()
