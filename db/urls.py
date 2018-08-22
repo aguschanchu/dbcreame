@@ -10,7 +10,9 @@ urlpatterns += [
 path('query/category/<str:category>/', views.CategoryView.as_view()),
 path('query/tag/<str:tags>/', views.TagView.as_view()),
 path('query/id/<uuid:id>/', views.ObjectView.as_view()),
-path('query/name/<str:name>/', views.NameView.as_view())
+path('query/name/<str:name>/', views.NameView.as_view()),
+path('query/<str:query>/', views.SearchView.as_view())
+
 ]
 #List view
 urlpatterns += [

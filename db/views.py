@@ -37,6 +37,7 @@ class CategoryView(generics.ListAPIView):
         return objetos
 
 class TagView(generics.ListAPIView):
+    #Devuelve todos los objetos que contengan a todos los tags (dados por un string separados por ,)
     serializer_class = ObjetoSerializer
     pagination_class = ObjectPagination
     lookup_url_kwarg = 'tags'
@@ -45,7 +46,7 @@ class TagView(generics.ListAPIView):
         tags = self.kwargs.get(self.lookup_url_kwarg).split(',')
         objetos = Objeto.objects.all()
         for tag in tags:
-            objetos = objetos.filter(tags__name=tag)
+            objetos = objetos.filter(tags__name=tag) | objetos.filter(tags__name_es=tag)
         return objetos
 
 class ObjectView(generics.RetrieveAPIView):
@@ -64,8 +65,33 @@ class NameView(generics.ListAPIView):
 
     def get_queryset(self):
         name = self.kwargs.get(self.lookup_url_kwarg)
-        objetos = Objeto.objects.filter(name__contains=name)
-        return objetosO
+        objetos = Objeto.objects.filter(name__contains=name) | Objeto.objects.filter(name_es__contains=name)
+        return objetos
+
+class SearchView(generics.ListAPIView):
+    '''
+    Es el metodo de busqueda mas generico, y que mas resultados devuelve. Dado una lista de palabras separadas con
+    espacio (strig), busca todos los objetos que contengan alguna de las palabras, sea en su nombre,
+    o en alguna de sus tags
+    '''
+    serializer_class = ObjetoSerializer
+    pagination_class = ObjectPagination
+    lookup_url_kwarg = 'query'
+
+    def get_queryset(self):
+        query = self.kwargs.get(self.lookup_url_kwarg).split(' ')
+        objetos_n = Objeto.objects.none()
+        objetos_t = Objeto.objects.none()
+        for word in query:
+            objetos_n = objetos_n | Objeto.objects.filter(name__contains=word) | Objeto.objects.filter(name_es__contains=word)
+        for word in query:
+            objetos_t = objetos_t | Objeto.objects.filter(tags__name_es=word) | Objeto.objects.filter(tags__name=word)
+
+        return (objetos_t | objetos_n).distinct()
+
+
+
+
 
 '''
 List views
