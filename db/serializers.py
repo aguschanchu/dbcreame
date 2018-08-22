@@ -32,14 +32,14 @@ class ObjetoSerializer(serializers.ModelSerializer):
 
     files = ArchivoSTLSerializer(many=True)
     images = ImagenSerializer(many=True)
-    modeloar = ModeloArSerializer()
+    ar_model = ModeloArSerializer(source='modeloar')
 
     class Meta:
         depth = 4
         model = Objeto
         fields = ('id', 'name', 'name_es', 'description', 'like_count', 'main_image', 'images',
          'files', 'author', 'creation_date', 'category', 'tags', 'external_id', 'liked',
-         'hidden','modeloar')
+         'hidden','ar_model')
 
 class ObjetoThingiSerializer(serializers.ModelSerializer):
     class Meta:
