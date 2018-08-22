@@ -5,7 +5,8 @@ from django.contrib.auth.models import User, AnonymousUser
 class ArchivoSTLSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArchivoSTL
-        fields = '__all__'
+        depth = 4
+        fields = ('id','file','printing_time_default','size_x_default','size_y_default','size_z_default','weight_default','time_as_a_function_of_scale')
 
 class ImagenSerializer(serializers.ModelSerializer):
     class Meta:
