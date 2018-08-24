@@ -9,7 +9,7 @@ import uuid
 import datetime
 import os
 import shutil
-import trimesh
+from multiprocessing import Pool
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -173,19 +173,28 @@ class ModeloAR(models.Model):
         if len(self.object.files.all()) == 1:
             self.combined_stl = self.object.files.all()[0].file
             self.human_flag = True
-            self.save(update_fields=['combined_stl'])
+            self.save(update_fields=['combined_stl','human_flag'])
             return True
         else:
             return False
 
     def arrange_and_combine_files(self):
         res = stl_to_sfb.combine_stls_files(self.object)
-        self.combined_stl.save(self.object.name+'.stl',File(open(res+'/plate00.stl','rb')),save=False)
-        self.save(update_fields=['combined_stl'])
+        with open(res+'/plate00.stl','rb') as f:
+            self.combined_stl.save(self.object.name+'.stl',File(f),save=False)
+            self.save(update_fields=['combined_stl'])
         shutil.rmtree(res)
 
     def combine_stl(self):
-        stl_to_sfb.combine_stl_with_correct_coordinates(self)
+        with Pool(processes=1) as pool:
+            res = pool.apply_async(stl_to_sfb.combine_stl_with_correct_coordinates,[self])
+            name = self.combined_stl.name
+            new_file = res.get()
+            #Borramos el archivo anterior
+            #self.combined_stl.delete()
+            self.combined_stl.save(name,new_file,save=False)
+            #Ejecutamos la funcion de guardar a parte, para que evitar un loop infinito con los signals
+            self.save(update_fields=['combined_stl','human_flag'])
 
     def create_sfb(self,generate=False):
         if not self.combined_stl.name:
@@ -195,10 +204,13 @@ class ModeloAR(models.Model):
                     self.arrange_and_combine_files()
             else:
                 return False
-        sfb_path = stl_to_sfb.convert(self.combined_stl)
-        self.sfb_file.save(sfb_path.split('/')[-1],File(open(sfb_path,'rb')),save=False)
-        self.save(update_fields=['sfb_file'])
-        os.remove(sfb_path)
+        with Pool(processes=1) as pool:
+            res = pool.apply_async(stl_to_sfb.convert,(settings.BASE_DIR+self.combined_stl.url,self.combined_stl.name))
+            sfb_path = res.get(timeout=30)
+        with open(sfb_path,'rb') as f:
+            self.sfb_file.save(sfb_path.split('/')[-1],File(f),save=False)
+            self.save(update_fields=['sfb_file'])
+            os.remove(sfb_path)
 
 class ModeloARRender(models.Model):
     image_render = models.FileField(upload_to='renders/',blank=True,null=True)
@@ -207,8 +219,14 @@ class ModeloARRender(models.Model):
     def create_render(self):
         if not self.model_ar.combined_stl.name:
             return False
-        mesh = trimesh.load_mesh(settings.BASE_DIR+self.model_ar.combined_stl.url)
-        self.image_render.save(self.model_ar.combined_stl.name.split('.')[0],ContentFile(mesh.scene().save_image()))
+        with Pool(processes=1) as pool:
+            #Trimesh maneja la memoria para el ojt
+            res = pool.apply_async(modeloarrender_render, [self])
+            self.image_render.save(self.model_ar.combined_stl.name.split('.')[0],ContentFile(res.get(timeout=30)))
+
+def modeloarrender_render(self):
+    import trimesh
+    return trimesh.load_mesh(settings.BASE_DIR+self.model_ar.combined_stl.url).scene().save_image()
 
 #Utilizados para actualizar el render al cambiar el ModeloAR
 @receiver(post_save, sender=ModeloAR)

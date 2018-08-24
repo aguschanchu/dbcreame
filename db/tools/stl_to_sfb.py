@@ -7,8 +7,9 @@ import os
 import traceback
 from django.core.files.base import ContentFile
 import random, string
+import gc
 
-def convert(fieldfile):
+def convert(stlpath,name):
     '''
     El proceso de conversion a sfb consiste en
     1) Reescalar el stl con un factor 1/1000, ya que sfb asume que las unidades de los modelos están en metros
@@ -17,7 +18,6 @@ def convert(fieldfile):
     3) Convertir OBJ a SFB
     '''
     #Reescalamos el STL
-    stlpath = settings.BASE_DIR+fieldfile.url
     try:
         mesh = trimesh.load_mesh(stlpath)
     except:
@@ -27,7 +27,7 @@ def convert(fieldfile):
     t = trimesh.transformations.scale_matrix(1/1000, [0,0,0])
     mesh.apply_transform(t)
     #Guardamos el OBJ
-    obj_path = settings.BASE_DIR + '/tmp/' + fieldfile.name.split('/')[-1].split('.')[0] + '.obj'
+    obj_path = settings.BASE_DIR + '/tmp/' + name.split('/')[-1].split('.')[0] + '.obj'
     with open(obj_path,'w') as f:
         f.write(trimesh.io.wavefront.export_wavefront(mesh))
     #Convertimos el sfb
@@ -42,7 +42,7 @@ def convert(fieldfile):
     else:
         raise Exception("Error al exportar SFB")
     #Devolvemos el path del sfb
-    return settings.BASE_DIR + '/tmp/' + fieldfile.name.split('/')[-1].split('.')[0] + '.sfb'
+    return settings.BASE_DIR + '/tmp/' + name.split('/')[-1].split('.')[0] + '.sfb'
 
 def combine_stls_files(objeto):
     '''
@@ -82,12 +82,8 @@ def combine_stl_with_correct_coordinates(objeto):
     Una vez que los archivos tienen un sistema coordenado en comun, unimos los archivos para generar el
     STL cominado
     '''
-    print([a.file.url for a in objeto.object.files.all()])
     meshes = [trimesh.load_mesh(settings.BASE_DIR + a.file.url) for a in objeto.object.files.all()]
     mesh = trimesh.util.concatenate(meshes)
     filename = objeto.object.name
-    #Borramos el archivo anterior
-    objeto.combined_stl.delete()
-    objeto.combined_stl.save(filename+'.stl',ContentFile(trimesh.io.stl.export_stl(mesh)),save=False)
-    #Ejecutamos la funcion de guardar a parte, para que evitar un loop infinito con los signals
-    objeto.save(update_fields=['combined_stl'])
+    new_file = ContentFile(trimesh.io.stl.export_stl(mesh))
+    return new_file
