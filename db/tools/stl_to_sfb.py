@@ -82,6 +82,7 @@ def combine_stl_with_correct_coordinates(objeto):
     Una vez que los archivos tienen un sistema coordenado en comun, unimos los archivos para generar el
     STL cominado
     '''
+    print([a.file.url for a in objeto.object.files.all()])
     meshes = [trimesh.load_mesh(settings.BASE_DIR + a.file.url) for a in objeto.object.files.all()]
     mesh = trimesh.util.concatenate(meshes)
     filename = objeto.object.name

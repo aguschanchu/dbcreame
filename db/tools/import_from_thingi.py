@@ -13,7 +13,9 @@ import json
 import urllib3
 from urllib3.util import Retry
 from urllib3 import PoolManager
+import pickle
 urllib3.disable_warnings()
+
 
 '''
 Tenemos un limite de 300/5', queremos monitorear cada key, para no pasarnos
@@ -165,6 +167,8 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     files_available_id = [a['id'] for a in rfiles]
     if file_list == None:
         file_list = files_available_id
+    elif type(file_list) == list:
+        pass
     else:
         file_list = json.loads(file_list)
     ### Nos pasaron una lista de archivos valida?
@@ -318,6 +322,18 @@ def add_objects(max_things,start_page=0):
                 print('Error al agregar objeto: {}'.format(item['id']))
         print('Contador: {}'.format(thing_counter))
 
+def import_from_thingiverse_parser(base):
+    '''
+    A partir de un BufferedReader de un archivo de pickle, importa las things
+    '''
+    base = pickle.load(base)
+    for thing in base:
+        try:
+            add_object_from_thingiverse(thing['thing_id'],file_list = thing['thing_files_id'])
+        except:
+            traceback.print_exc()
+            time.sleep(2)
+            print('Error al agregar objeto: {}'.format(thing['thing_id']))
 
 
 
