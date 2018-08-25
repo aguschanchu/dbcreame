@@ -1,3 +1,10 @@
+django
+django_rest_framework
+django_allauth
+django_rest_framework
+django-rest-auth[with_social]
+social-auth-app-django
 google-cloud-translate
 trimesh
 pyglet
+uwsgi
