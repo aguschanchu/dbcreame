@@ -25,7 +25,7 @@ SECRET_KEY = '***REMOVED***'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['api.creame3d.com']
+ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1','192.168.1.2']
 
 
 # Application definition
@@ -37,8 +37,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    #Autenticacion django-rest-auth
     'rest_framework',
-    'db'
+    'rest_framework.authtoken',
+    'rest_auth',
+    'rest_auth.registration',
+    #Autenticacion con allauth (via social auth)
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.facebook',
+    'allauth.socialaccount.providers.google',
+    #Aplicaciones propias
+    'db',
 ]
 
 MIDDLEWARE = [
@@ -64,6 +76,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -115,6 +129,27 @@ USE_L10N = True
 
 USE_TZ = True
 
+SITE_ID = 1
+
+ADMIN_SITE_HEADER = "NoName DB Administration"
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    ),
+}
+
+AUTHENTICATION_BACKENDS = (
+       # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by e-mail
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
@@ -123,6 +158,12 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = 'media/'
 MEDIA_URL = '/media/'
+
+#Allauth configuration
+SOCIALACCOUNT_EMAIL_VERIFICATION = None
+SOCIALACCOUNT_EMAIL_REQUIRED = False
+SOCIALACCOUNT_QUERY_EMAIL = True
+
 
 #Configuraciones adicionales
 SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'

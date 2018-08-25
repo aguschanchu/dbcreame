@@ -13,7 +13,9 @@ import json
 import urllib3
 from urllib3.util import Retry
 from urllib3 import PoolManager
+import pickle
 urllib3.disable_warnings()
+
 
 '''
 Tenemos un limite de 300/5', queremos monitorear cada key, para no pasarnos
@@ -95,7 +97,7 @@ def get_thing_categories_list(thingiid):
         result.append(category_name)
     return result
 
-def add_object_from_thingiverse(thingiid,file_list = None):
+def add_object_from_thingiverse(thingiid,file_list = None, override = False, debug = True):
     http = PoolManager(retries=Retry(total=5, status_forcelist=[500]))
     print("Iniciando descarga de "+str(thingiid))
     r = request_from_thingi('things/{}'.format(thingiid))
@@ -105,8 +107,14 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     # Procedemos a crear la thing
     ## Referencia Externa
     if modelos.ReferenciaExterna.objects.filter(repository='thingiverse',external_id=r['id']).exists():
-        #Pudimos obtener el modelo. eso significa que ya existe!
-        raise ValueError("Referencia externa en DB ¿existe el modelo?")
+        #Pudimos obtener el modelo. eso significa que ya existe! Pero, está asociado a algo?
+        for refext in modelos.ReferenciaExterna.objects.filter(repository='thingiverse',external_id=r['id']):
+            try:
+                refext.objeto
+                #Si no tenemos una exception, eso signfica que...
+                raise ValueError("Referencia externa en DB ¿existe el modelo?")
+            except modelos.Objeto.DoesNotExist:
+                referencia_externa = refext
     else:
         #Procedemos a crear la ref externa
         referencia_externa = modelos.ReferenciaExterna.objects.create(repository='thingiverse',external_id=r['id'])
@@ -117,12 +125,18 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     ### Veamos que categorias existen, en la DB. Las que no, las creamos.
     for cat in get_thing_categories_list(thingiid):
         categorias.append(modelos.Categoria.objects.get_or_create(name=cat)[0])
+    ### Pedimos que traduzca las categorias. Si ya existia, no pasa nada, ya que se ejecuta solo si no fue traducida
+    for cat in categorias:
+        cat.translate_es()
     ## Tags
     rtag = request_from_thingi('things/{}/tags'.format(thingiid))
     tags = []
     ### Veamos que categorias existen, en la DB. Las que no, las creamos.
     for tag in rtag:
         tags.append(modelos.Tag.objects.get_or_create(name=tag['name'])[0])
+    ### Traduccion de tags
+    for tag in tags:
+        tag.translate_es()
     ## Imagenes
     print("Descargando imagenes")
     rimg = request_from_thingi('things/{}/images'.format(thingiid))
@@ -148,10 +162,13 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         imagenes.append(imagen)
 
     ## Archvos STL
+    print("Preparando archivos")
     rfiles = request_from_thingi('things/{}/files'.format(thingiid))
     files_available_id = [a['id'] for a in rfiles]
     if file_list == None:
         file_list = files_available_id
+    elif type(file_list) == list:
+        pass
     else:
         file_list = json.loads(file_list)
     ### Nos pasaron una lista de archivos valida?
@@ -159,7 +176,8 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         if id not in files_available_id:
             raise ValueError("IDs de archivos invalida: "+id)
     ### Tenemos una lista valida, procedemos a descargar los archivos
-    print('Descargando lista de archivos: \n', file_list)
+    print('Descargando lista de archivos:')
+    print(file_list)
     archivos = []
     for id in file_list:
         for thing_file in rfiles:
@@ -173,27 +191,37 @@ def add_object_from_thingiverse(thingiid,file_list = None):
                         print(thing_file)
                         raise ValueError("Error al descargar archivo")
                     archivo = modelos.ArchivoSTL()
-                    archivo.file.save(name,ContentFile(rfile_src))
+                    archivo.file.save(referencia_externa.repository+'-'+str(referencia_externa.external_id)+'-'+name,ContentFile(rfile_src))
                     archivos.append(archivo)
     ### Tenemos los archivos descargados. Necesitamos completar su tiempo de imp, peso, dimensiones
+    print("Ejecutando trabajos de sliceo")
     slicer_jobs_ids = {}
     slicer_jobs_ids_poly = {}
     for archivo in archivos:
         archivos_r = {'file': archivo.file.open(mode='rb')}
         rf = requests.post(settings.SLICER_API_ENDPOINT, files = archivos_r)
         archivos_r = {'file': archivo.file.open(mode='rb')}
-        rfp = requests.post(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/', files = archivos_r)
+        parametros = {'escala_inicial':'0.2','escala_final':'1.2','escala_paso':'0.2'}
+        rfp = requests.post(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/', files = archivos_r, data = parametros)
         archivo.file.close
         #Parseamos la id de trabajo
         slicer_jobs_ids[archivo] = rf.json()['id']
         slicer_jobs_ids_poly[archivo] = rfp.json()['id']
-    ### Esperamos 300s a que haga todos los trabajos
+    ### Esperamos 600s a que haga todos los trabajos
+    print("Trabajos inicializados")
     poly_f, slice_f = False, False
-    for _ in range(0,300):
+    for _ in range(0,600):
+        if debug and _%60==0:
+            print("---------ID-------------------------ESTADO-----------")
         #Termino con el calculo de polinomios?
         if not poly_f:
             for job_id in slicer_jobs_ids_poly.values():
                 estado = requests.get(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/status/{}/'.format(job_id)).json()['estado']
+                if debug and _%60==0:
+                    print("          {}                      {}".format(job_id,estado))
+                if int(estado) >= 300:
+                    print("Hubo un error de sliceo, el identificador de trabajo es {}, con estado {}".format(job_id,estado))
+                    raise ValueError("Slicing error")
                 if estado != '200':
                     break
             else:
@@ -202,6 +230,11 @@ def add_object_from_thingiverse(thingiid,file_list = None):
         if not slice_f:
             for job_id in slicer_jobs_ids.values():
                 estado = requests.get(settings.SLICER_API_ENDPOINT+'status/{}/'.format(job_id)).json()['estado']
+                if debug and _%60==0:
+                    print("          {}                      {}".format(job_id,estado))
+                if int(estado) >= 300:
+                    print("Hubo un error de sliceo, el identificador de trabajo es {}, con estado {}".format(job_id,estado))
+                    raise ValueError("Slicing error")
                 if estado != '200':
                     break
             else:
@@ -243,18 +276,34 @@ def add_object_from_thingiverse(thingiid,file_list = None):
     objeto.description = r['description']
     objeto.external_id = referencia_externa
     objeto.main_image.save(main_image_name,main_image)
-    objeto.save()
 
-    for imagen in imagenes:
-        objeto.images.add(imagen)
-    for archivo in archivos:
-        objeto.files.add(archivo)
     for categoria in categorias:
         objeto.category.add(categoria)
     for tag in tags:
         objeto.tags.add(tag)
 
     objeto.save()
+
+    #Linkeamos los ForeignKey antes creados al objeto creado
+    for imagen in imagenes:
+        imagen.object = objeto
+        imagen.save()
+    for archivo in archivos:
+        archivo.object = objeto
+        archivo.save()
+
+    modelo_ar = modelos.ModeloAR()
+    modelo_ar.object = objeto
+    modelo_ar.save()
+
+    #Preparamos el modelo AR
+    modelo_ar.create_sfb(generate=True)
+
+    #Traducimos el nombre
+    objeto.translate_es()
+    objeto.save()
+
+
 
 def add_objects(max_things,start_page=0):
     #Funcion para popular la base de datos
@@ -268,9 +317,23 @@ def add_objects(max_things,start_page=0):
                 add_object_from_thingiverse(item['id'])
                 thing_counter += 1
             except:
-                print('Error al agregar objeto: {}'.format(id))
+                traceback.print_exc()
+                time.sleep(2)
+                print('Error al agregar objeto: {}'.format(item['id']))
         print('Contador: {}'.format(thing_counter))
 
+def import_from_thingiverse_parser(base):
+    '''
+    A partir de un BufferedReader de un archivo de pickle, importa las things
+    '''
+    base = pickle.load(base)
+    for thing in base:
+        try:
+            add_object_from_thingiverse(thing['thing_id'],file_list = thing['thing_files_id'])
+        except:
+            traceback.print_exc()
+            time.sleep(2)
+            print('Error al agregar objeto: {}'.format(thing['thing_id']))
 
 
 
@@ -283,14 +346,7 @@ from db.models import *
 ***REMOVED***
 ***REMOVED***
 ***REMOVED***
-
-add_object_from_thingiverse(1159321)
-objects = [481259,430957,570288,2918926,2995849,3002897,1159321,2829553,2531208]
-for object in objects:
-    add_object_from_thingiverse(object)
-p = QueryPool.objects.create()
-p.keys.add(a)
-p.get_key()
+add_objects(10)
 
 def dowload_thing(thingiid,file_list):
 '''
