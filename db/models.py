@@ -16,7 +16,7 @@ from django.dispatch import receiver
 from django.conf import settings
 from google.cloud import translate
 from django_mercadopago import models as MPModels
-
+from django.core.validators import MinLengthValidator
 
 '''
 Modelos internos (almacenados en la DB)
@@ -228,6 +228,7 @@ class ModeloARRender(models.Model):
 
 def modeloarrender_render(self):
     import trimesh
+    import pyglet
     return trimesh.load_mesh(settings.BASE_DIR+self.model_ar.combined_stl.url).scene().save_image()
 
 #Utilizados para actualizar el render al cambiar el ModeloAR
@@ -249,6 +250,14 @@ def update_render_and_model(sender, instance, update_fields, **kwargs):
 '''
 Modelos de usuarios/compras
 '''
+
+class Color(models.Model):
+    name = models.CharField(max_length=100)
+    #Hex color code
+    code = models.CharField(max_length=6, validators=[MinLengthValidator(6)])
+    #Esta el color en stock?
+    available = models.BooleanField(blank=True,default=True)
+
 
 class Usuario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -281,7 +290,7 @@ class Compra(models.Model):
 
 class ObjetoPersonalizado(models.Model):
     object_id = models.ForeignKey(Objeto,on_delete=models.PROTECT)
-    color = models.CharField(max_length=100,default='white')
+    color = models.ForeignKey(Color,on_delete=models.PROTECT)
     scale = models.FloatField(blank=True,default=1)
     quantity = models.IntegerField(blank=True,default=1)
     purchase = models.ForeignKey(Compra,on_delete=models.CASCADE,related_name='purchased_objects')

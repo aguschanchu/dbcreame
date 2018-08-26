@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR
+from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR, Color
 from django.utils.html import format_html_join, format_html
 import trimesh
 
@@ -107,6 +107,14 @@ class ObjetoAdmin(admin.ModelAdmin):
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
     list_display = ('user',)
+
+@admin.register(Color)
+class ColorAdmin(admin.ModelAdmin):
+    list_display = ('name','color','available')
+    read_only = ('color')
+
+    def color(self,obj):
+        return format_html("<div style='background: #{}; height: 20px;'></div>".format(obj.code))
 
 
 @admin.register(ObjetoPersonalizado)

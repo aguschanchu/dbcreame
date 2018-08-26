@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR
+from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color
 from django.contrib.auth.models import User, AnonymousUser
 from django_mercadopago import models as MPModels
 
@@ -69,7 +69,13 @@ Definimos el serializador de Compra con un poco mas de cuidado, para poder seria
 en forma nesteada una compra; simplificando la creacion de estas.
 '''
 
+class ColorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Color
+        fields = '__all__'
+
 class ObjetoPersonalizadoSerializer(serializers.ModelSerializer):
+    color = ColorSerializer()
     class Meta:
         model = ObjetoPersonalizado
         fields = ('name','object_id','color','scale','quantity')

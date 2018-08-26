@@ -1,5 +1,5 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer
-from db.models import Objeto, Tag, Categoria, Compra
+from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer
+from db.models import Objeto, Tag, Categoria, Compra, Color
 from rest_framework import generics, status, pagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -93,7 +93,6 @@ class SearchView(generics.ListAPIView):
 
 
 
-
 '''
 List views
 '''
@@ -116,12 +115,20 @@ class ListAllTagsView(generics.ListAPIView):
     def get_queryset(self):
         return Tag.objects.all()
 
+'''
+Compras
+'''
+
 class ListAllOrdersView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = CompraSerializer
 
     def get_queryset(self):
         return Compra.objects.filter(buyer=self.request.user.usuario)
+
+class ListAllColorsView(generics.ListAPIView):
+    serializer_class = ColorSerializer
+    queryset = Color.objects.all()
 
 '''
 Operations views
