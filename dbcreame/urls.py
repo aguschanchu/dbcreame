@@ -25,6 +25,11 @@ urlpatterns = [
     url(r'^db/', include('db.urls')),
 ]
 
+#Mercadopago
+urlpatterns += [
+url(r'^db/mercadopago/', include(('django_mercadopago.urls','mercadopago'), namespace='mp')),
+]
+
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 admin.site.site_header = settings.ADMIN_SITE_HEADER

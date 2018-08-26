@@ -1,4 +1,4 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer, CompraSerializer
+from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer
 from db.models import Objeto, Tag, Categoria, Compra
 from rest_framework import generics, status, pagination
 from rest_framework.views import APIView
@@ -8,6 +8,7 @@ from django.http import Http404
 from .tools import import_from_thingi
 import json
 import traceback
+from django_mercadopago import models as MPModels
 # Auth
 from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
@@ -198,7 +199,7 @@ class GoogleLogin(SocialLoginView):
     POST parameter `code` should contain the access code provided by Google OAuth backend,
     which the backend uses in turn to fetch user data from the Google authentication backend.
 
-    POST parameter `access_token` might not function with this function.
+    POST parameter `access' might not function with this function.
 
     Requires `callback_url` to be properly set in the configuration, this is of format:
 
@@ -208,3 +209,19 @@ class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
     callback_url = settings.CURRENT_PROTOCOL+ '://' + settings.CURRENT_HOST + ':' + str(settings.CURRENT_PORT) + '/db/accounts/google/login/callback/'
+
+'''
+Mercadopago
+'''
+
+class MercadopagoSuccessUrl(generics.RetrieveAPIView):
+    serializer_class = PaymentNotificationSerializer
+    lookup_url_kwarg = 'pk'
+
+    def get_object(self):
+        pk = self.kwargs.get(self.lookup_url_kwarg)
+        try:
+            preference = MPModels.Notification.objects.get(id=pk)
+        except MPModels.Notification.DoesNotExist:
+             raise Http404
+        return preference

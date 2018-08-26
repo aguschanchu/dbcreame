@@ -15,6 +15,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
 from google.cloud import translate
+from django_mercadopago import models as MPModels
+
 
 '''
 Modelos internos (almacenados en la DB)
@@ -264,15 +266,6 @@ def create_user_profile(sender, instance, created, **kwargs):
 def save_user_profile(sender, instance, **kwargs):
     instance.usuario.save()
 
-class ObjetoPersonalizado(models.Model):
-    object_id = models.ForeignKey(Objeto,on_delete=models.PROTECT)
-    color = models.CharField(max_length=100,default='white')
-    scale = models.FloatField(blank=True,default=1)
-    quantity = models.IntegerField(blank=True,default=1)
-
-    def name(self):
-        return self.object_id.name
-
 class Compra(models.Model):
     estados = (
         ('accepted', 'Aceptado'),
@@ -281,13 +274,20 @@ class Compra(models.Model):
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     buyer = models.ForeignKey(Usuario,on_delete=models.CASCADE)
-    purchased_objects = models.ManyToManyField(ObjetoPersonalizado)
     date = models.DateTimeField(default=datetime.datetime.now)
     status = models.CharField(choices=estados,max_length=300)
     delivery_address = models.CharField(max_length=300)
-    #Este campo hay que optimizarlo segun el output de MP
-    payment_method = models.CharField(max_length=300)
+    payment_preferences = models.ForeignKey(MPModels.Preference,on_delete=models.CASCADE)
 
+class ObjetoPersonalizado(models.Model):
+    object_id = models.ForeignKey(Objeto,on_delete=models.PROTECT)
+    color = models.CharField(max_length=100,default='white')
+    scale = models.FloatField(blank=True,default=1)
+    quantity = models.IntegerField(blank=True,default=1)
+    purchase = models.ForeignKey(Compra,on_delete=models.CASCADE,related_name='purchased_objects')
+
+    def name(self):
+        return self.object_id.name
 '''
 Modelos externos
 '''

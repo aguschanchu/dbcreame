@@ -11,6 +11,16 @@ def populate():
     password = 'Ferraro'
     create_super_user(username, email, password)
 
+    #Mercadopago config
+    acc = MPAccount()
+    acc.name = "Creame3DMP"
+    acc.slug = "C3DMP"
+    acc.secret_key = "WOUOn19HfffVZWT3yYqWQLmnAVGp29W3"
+    acc.app_id = "2260588880481871"
+    acc.sandbox = True
+    acc.save()
+    print("Mecadopago added")
+
     #Social accounts config
     site = Site.objects.get_or_create(domain=settings.CURRENT_HOST,name=settings.CURRENT_HOST)[0]
     ##Google Config
@@ -32,8 +42,16 @@ def populate():
     o.sites.add(site)
     o.save()
     print("Social accounts created")
-    print("Migration finished successfully")
 
+    #ApiKeys (Thingiverse) population
+    ***REMOVED***
+    ***REMOVED***
+    ***REMOVED***
+    ***REMOVED***
+    print("API Keys (Thingiverse) added")
+
+
+    print("Migration finished successfully")
 
 def create_super_user(username, email, password):
     try:
@@ -54,4 +72,7 @@ if __name__ == '__main__':
     from django.conf import settings
     from django.db import IntegrityError
     from allauth.socialaccount.models import Site, SocialApp
+    from django_mercadopago.models import Account as MPAccount
+    from db.tools.import_from_thingi import *
+    from db.models import *
     populate()

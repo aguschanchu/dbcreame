@@ -3,6 +3,8 @@ from django.urls import path
 from db import views
 from rest_framework.urlpatterns import format_suffix_patterns
 
+app_name = 'db'
+
 urlpatterns = []
 
 #Query View
@@ -35,4 +37,9 @@ path('accounts/', include('rest_auth.urls')),
 url(r'^accounts/registration/', include('rest_auth.registration.urls')),
 url(r'^accounts/facebook/$', views.FacebookLogin.as_view(), name='fb_login'),
 url(r'^accounts/google/login/callback/$', views.GoogleLogin.as_view(), name='google_callback'),
+]
+
+#Mercadopago
+urlpatterns += [
+path('mp/<str:pk>/', views.MercadopagoSuccessUrl.as_view(),name='success_url')
 ]

@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR
 from django.contrib.auth.models import User, AnonymousUser
+from django_mercadopago import models as MPModels
+
 
 class ArchivoSTLSerializer(serializers.ModelSerializer):
     class Meta:
@@ -61,6 +63,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('username',)
 
+
 '''
 Definimos el serializador de Compra con un poco mas de cuidado, para poder serializar
 en forma nesteada una compra; simplificando la creacion de estas.
@@ -71,8 +74,19 @@ class ObjetoPersonalizadoSerializer(serializers.ModelSerializer):
         model = ObjetoPersonalizado
         fields = ('name','object_id','color','scale','quantity')
 
+class PaymentPreferencesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MPModels.Preference
+        fields = '__all__'
+
+class PaymentNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MPModels.Notification
+        fields = '__all__'
+
 class CompraSerializer(serializers.ModelSerializer):
     purchased_objects = ObjetoPersonalizadoSerializer(many=True)
+    payment_preferences = PaymentPreferencesSerializer()
     class Meta:
         model = Compra
-        fields = ('id','buyer','purchased_objects','date','status','delivery_address','payment_method')
+        fields = ('id','buyer','purchased_objects','date','status','delivery_address','payment_preferences')

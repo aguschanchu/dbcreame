@@ -26,9 +26,9 @@ SECRET_KEY = '***REMOVED***'
 DEBUG = True
 
 ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1','192.168.1.2','agusc.ovh']
-CURRENT_HOST = 'api.creame3d.com'
-CURRENT_PROTOCOL = 'http'
-CURRENT_PORT = 11000
+CURRENT_HOST = 'agusc.ovh'
+CURRENT_PROTOCOL = 'https'
+CURRENT_PORT = 80
 SITE_ID = 2
 
 # Application definition
@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.facebook',
     'allauth.socialaccount.providers.google',
+    #Mercadochorros
+    'django_mercadopago',
     #Aplicaciones propias
     'db',
 ]
@@ -94,8 +96,12 @@ WSGI_APPLICATION = 'dbcreame.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'dbapi',
+        'USER': 'dbapi',
+        'PASSWORD': 'Ferraro',
+        'HOST': 'localhost',
+        'PORT': '',
     }
 }
 
@@ -132,8 +138,6 @@ USE_L10N = True
 
 USE_TZ = True
 
-SITE_ID = 1
-
 ADMIN_SITE_HEADER = "NoName DB Administration"
 
 REST_FRAMEWORK = {
@@ -154,6 +158,8 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
@@ -166,6 +172,16 @@ MEDIA_URL = '/media/'
 SOCIALACCOUNT_EMAIL_VERIFICATION = None
 SOCIALACCOUNT_EMAIL_REQUIRED = False
 SOCIALACCOUNT_QUERY_EMAIL = True
+
+#MercadoLibre configuration
+
+MERCADOPAGO = {
+    'autoprocess': True,
+    'success_url': 'db:success_url',
+    'failure_url': 'myapp:mp_failure',
+    'pending_url': 'myapp:mp_pending',
+    'base_host': CURRENT_PROTOCOL + '://' + CURRENT_HOST
+}
 
 
 #Configuraciones adicionales

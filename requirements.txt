@@ -8,3 +8,5 @@ google-cloud-translate
 trimesh
 pyglet
 uwsgi
+https://github.com/mercadopago/sdk-python.git#egg=mercadopago
+django-mercadopago
