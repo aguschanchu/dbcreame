@@ -26,15 +26,26 @@ def convert(stlpath,name):
         raise Exception("Error al importar STL a trimesh")
     t = trimesh.transformations.scale_matrix(1/1000, [0,0,0])
     mesh.apply_transform(t)
-    #Guardamos el OBJ
+    #Guardamos el STL transformado
+    stl_path = settings.BASE_DIR + '/tmp/' + name.split('/')[-1].split('.')[0] + '.stl'
+    with open(stl_path,'wb') as f:
+        f.write(trimesh.io.stl.export_stl(mesh))
+    #Convertimos el stl a obj usando assimp
     obj_path = settings.BASE_DIR + '/tmp/' + name.split('/')[-1].split('.')[0] + '.obj'
-    with open(obj_path,'w') as f:
-        f.write(trimesh.io.wavefront.export_wavefront(mesh))
+    args = ['assimp', 'export', stl_path, obj_path]
+    proc = subprocess.run(args,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    #Se convirtio exitosamente?
+    if 'Exporting file ...                   OK ' not in proc.stdout.splitlines():
+        print(proc.stdout.splitlines())
+        raise Exception("Error al convertir STL a OBJ")
     #Convertimos el sfb
     args = [settings.BASE_DIR + '/lib/sceneform_sdk/linux/converter','-d','--mat',settings.BASE_DIR + '/lib/sceneform_sdk/default_materials/obj_material.sfm',
     '--outdir', settings.BASE_DIR + '/tmp/',obj_path]
     proc = subprocess.run(args,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    #Borramos los archivos generados
     os.remove(obj_path)
+    os.remove(stl_path)
+    os.remove(obj_path+'.mtl')
     #Se proceso correctamente?
     for line in proc.stdout.splitlines():
         if 'Wrote SFB to' in line:
