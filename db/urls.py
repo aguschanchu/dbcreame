@@ -42,5 +42,6 @@ url(r'^accounts/google/login/callback/$', views.GoogleLogin.as_view(), name='goo
 
 #Mercadopago
 urlpatterns += [
-path('mp/<str:pk>/', views.MercadopagoSuccessUrl.as_view(),name='success_url')
+path('mp/<str:pk>/', views.MercadopagoSuccessUrl.as_view(),name='success_url'),
+path('mp/builder',views.MercadopagoReferenceBuilder.as_view())
 ]

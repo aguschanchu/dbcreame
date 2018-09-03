@@ -16,6 +16,8 @@ from rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from django.conf import settings
 
+# TEMP
+import requests
 '''
 Pagination classes
 '''
@@ -232,3 +234,10 @@ class MercadopagoSuccessUrl(generics.RetrieveAPIView):
         except MPModels.Notification.DoesNotExist:
              raise Http404
         return preference
+
+class MercadopagoReferenceBuilder(APIView):
+    def post(self, request, format=None):
+        #id = "288813417-c9777d09-6dd7-4f69-83d9-36575f327b16"
+        id = "288813417-9370a351-e7b5-49ab-81b2-de56dd77a668"
+        data = requests.get("https://api.mercadopago.com/checkout/preferences/{}?access_token=APP_USR-2260588880481871-082818-d51130abf80fe471884ba9a9701eb419-288813417".format(id)).json()
+        return Response(data)
