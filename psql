@@ -5,4 +5,4 @@ ALTER ROLE dbapi SET default_transaction_isolation TO 'read committed';
 ALTER ROLE dbapi SET timezone TO 'UTC';
 GRANT ALL PRIVILEGES ON DATABASE dbapi TO dbapi;
 
-CREATE USER dbapi WITH PASSWORD 'Ferraro';
+CREATE USER dbapi WITH PASSWORD '***REMOVED***';
