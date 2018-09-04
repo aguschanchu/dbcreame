@@ -5,6 +5,7 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 from .tools import import_from_thingi
 from .tools import stl_to_sfb
+from .render.blender import render_image
 import uuid
 import datetime
 import os
@@ -221,15 +222,10 @@ class ModeloARRender(models.Model):
     def create_render(self):
         if not self.model_ar.combined_stl.name:
             return False
-        with Pool(processes=1) as pool:
-            #Trimesh maneja la memoria para el ojt
-            res = pool.apply_async(modeloarrender_render, [self])
-            self.image_render.save(self.model_ar.combined_stl.name.split('.')[0],ContentFile(res.get(timeout=30)))
-
-def modeloarrender_render(self):
-    import trimesh
-    import pyglet
-    return trimesh.load_mesh(settings.BASE_DIR+self.model_ar.combined_stl.url).scene().save_image()
+        png_path = render_image(self.model_ar)
+        with open(png_path,'rb') as f:
+            self.image_render.save(self.model_ar.combined_stl.name.split('.')[0],File(f))
+        os.remove(png_path)
 
 #Utilizados para actualizar el render al cambiar el ModeloAR
 @receiver(post_save, sender=ModeloAR)
