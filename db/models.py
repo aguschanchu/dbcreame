@@ -7,6 +7,7 @@ from .tools import import_from_thingi
 from .tools import stl_to_sfb
 from .tools import dbdispatcher
 from .render.blender import render_image
+from .render.plot_poly import polyplot
 import uuid
 import datetime
 import os
@@ -75,12 +76,18 @@ class Polinomio(models.Model):
     a3 = models.FloatField(default=0)
     a4 = models.FloatField(default=0)
     a5 = models.FloatField(default=0)
+    plot = models.ImageField(upload_to='images/plots',null=True,blank=True)
 
     def __str__(self):
         return "{} x^5+ {} x^4+ {} x^3+ {} x^2+ {} x+ {}".format(self.a5,self.a4,self.a3,self.a2,self.a1,self.a0)
 
     def coefficients_list(self):
         return [self.a5,self.a4,self.a3,self.a2,self.a1,self.a0]
+
+@receiver(post_save, sender=Polinomio)
+def plot_poly(sender, instance, update_fields, **kwargs):
+    if update_fields == None:
+        polyplot(instance)
 
 
 '''

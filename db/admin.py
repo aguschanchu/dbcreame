@@ -25,6 +25,10 @@ class TagAdmin(admin.ModelAdmin):
 @admin.register(Polinomio)
 class PolinomioAdmin(admin.ModelAdmin):
     list_display = ('a0','a1','a2','a3','a4','a5')
+    readonly_fields = ('image',)
+
+    def image(self,obj):
+        return format_html('<img src='+obj.plot.url+' width="40%" height="40%"></img>')
 
 @admin.register(ReferenciaExterna)
 class ReferenciaExternaAdmin(admin.ModelAdmin):
