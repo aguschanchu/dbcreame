@@ -1,0 +1,8 @@
+Vendedor (agusc.ovh):
+{"id":352077964,"nickname":"TESTUDJRISWF","password":"qatest8262","site_status":"active","email":"test_user_10970890@testuser.com"}
+App ID:***REMOVED***
+Secret Key:***REMOVED***
+
+Comprador:
+{"id":352079709,"nickname":"TT434297","password":"qatest3485","site_status":"active","email":"test_user_4752238@testuser.com"}
+Visa-SBX: 4509953566233704

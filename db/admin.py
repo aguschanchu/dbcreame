@@ -123,7 +123,8 @@ class ObjetoPersonalizadoAdmin(admin.ModelAdmin):
 
 @admin.register(Compra)
 class CompraAdmin(admin.ModelAdmin):
-    list_display = ('date','status')
+    list_display = ('date','status','buyer')
+    ordering = ('date',)
 
 @admin.register(Imagen)
 class ImagenAdmin(admin.ModelAdmin):

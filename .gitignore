@@ -3,3 +3,4 @@ migrations
 *.stl
 media
 tmp
+server-dev.ini

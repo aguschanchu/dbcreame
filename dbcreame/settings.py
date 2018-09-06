@@ -29,7 +29,7 @@ ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1','192.168.1.2','agusc
 CURRENT_HOST = 'agusc.ovh'
 CURRENT_PROTOCOL = 'https'
 CURRENT_PORT = 80
-SITE_ID = 2
+SITE_ID = 3
 
 # Application definition
 
@@ -102,6 +102,9 @@ DATABASES = {
         'PASSWORD': '***REMOVED***',
         'HOST': 'localhost',
         'PORT': '',
+        'OPTIONS': {
+           'sslmode': 'disable',
+        }
     }
 }
 
@@ -187,3 +190,4 @@ MERCADOPAGO = {
 #Configuraciones adicionales
 SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'
 THINGIVERSE_API_ENDPOINT = 'https://api.thingiverse.com/'
+PRECIO_POR_HORA_DE_IMPRESION = 40

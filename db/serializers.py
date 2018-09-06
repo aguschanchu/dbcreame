@@ -2,8 +2,8 @@ from rest_framework import serializers
 from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color
 from django.contrib.auth.models import User, AnonymousUser
 from django_mercadopago import models as MPModels
-
-
+from django.db.utils import IntegrityError
+from django.core.exceptions import ValidationError
 class ArchivoSTLSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArchivoSTL
@@ -72,13 +72,14 @@ en forma nesteada una compra; simplificando la creacion de estas.
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Color
-        fields = '__all__'
+        fields = ('id','name','code','available')
 
 class ObjetoPersonalizadoSerializer(serializers.ModelSerializer):
-    color = ColorSerializer()
+    #olor = serializers.PrimaryKeyRelatedField(read_only=True)
     class Meta:
         model = ObjetoPersonalizado
         fields = ('name','object_id','color','scale','quantity')
+        extra_kwargs = {'color': {'required': True}}
 
 class PaymentPreferencesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -92,7 +93,16 @@ class PaymentNotificationSerializer(serializers.ModelSerializer):
 
 class CompraSerializer(serializers.ModelSerializer):
     purchased_objects = ObjetoPersonalizadoSerializer(many=True)
-    payment_preferences = PaymentPreferencesSerializer()
+    payment_preferences = PaymentPreferencesSerializer(required=False, allow_null=True)
+
     class Meta:
         model = Compra
         fields = ('id','buyer','purchased_objects','date','status','delivery_address','payment_preferences')
+
+    #DRF no soporta creacion de objetos nesteados out-of-the-box, de modo, que reemplazamos el metodo de creacion
+    def create(self, validated_data):
+        purchased_objects_data = validated_data.pop('purchased_objects')
+        compra = Compra.objects.create(**validated_data)
+        for purchased_object_data in purchased_objects_data:
+            ObjetoPersonalizado.objects.create(purchase=compra, **purchased_object_data)
+        return compra

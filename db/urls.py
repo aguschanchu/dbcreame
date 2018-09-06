@@ -28,6 +28,11 @@ path('list/colors',views.ListAllColorsView.as_view()),
 urlpatterns += [
 path('update/like/<uuid:id>/',views.ToggleLike.as_view())
 ]
+#Ordenes
+urlpatterns += [
+path('orders/place/',views.CreateOrderView.as_view()),
+path('orders/list', views.ListAllOrdersView.as_view()),
+]
 #External tools
 urlpatterns += [
 path('tools/add_object_from_thingiverse/',views.AddObjectFromThingiverse.as_view())
@@ -39,7 +44,6 @@ url(r'^accounts/registration/', include('rest_auth.registration.urls')),
 url(r'^accounts/facebook/$', views.FacebookLogin.as_view(), name='fb_login'),
 url(r'^accounts/google/login/callback/$', views.GoogleLogin.as_view(), name='google_callback'),
 ]
-
 #Mercadopago
 urlpatterns += [
 path('mp/<str:pk>/', views.MercadopagoSuccessUrl.as_view(),name='success_url'),

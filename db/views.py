@@ -1,14 +1,15 @@
 from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer
-from db.models import Objeto, Tag, Categoria, Compra, Color
+from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado
 from rest_framework import generics, status, pagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from django.http import Http404
-from .tools import import_from_thingi
+from .tools import import_from_thingi, price_calculator
 import json
 import traceback
 from django_mercadopago import models as MPModels
+import mercadopago
 # Auth
 from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
@@ -93,8 +94,6 @@ class SearchView(generics.ListAPIView):
         return (objetos_t | objetos_n).distinct()
 
 
-
-
 '''
 List views
 '''
@@ -113,12 +112,15 @@ class ListAllCategoriesView(generics.ListAPIView):
 
 class ListAllTagsView(generics.ListAPIView):
     serializer_class = TagSerializer
-
     def get_queryset(self):
         return Tag.objects.all()
 
+class ListAllColorsView(generics.ListAPIView):
+    serializer_class = ColorSerializer
+    queryset = Color.objects.all()
+
 '''
-Compras
+Orders views
 '''
 
 class ListAllOrdersView(generics.ListAPIView):
@@ -126,11 +128,38 @@ class ListAllOrdersView(generics.ListAPIView):
     serializer_class = CompraSerializer
 
     def get_queryset(self):
-        return Compra.objects.filter(buyer=self.request.user.usuario)
+        user = self.request.user
+        return Compra.objects.filter(buyer=user.usuario)    
 
-class ListAllColorsView(generics.ListAPIView):
-    serializer_class = ColorSerializer
-    queryset = Color.objects.all()
+class CreateOrderView(generics.CreateAPIView):
+    serializer_class = CompraSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        #Creamos la compra a partir de los datos serializados
+        compra = serializer.save()
+        #Asignamos el comprador
+        user = request.user
+        compra.buyer = user.usuario
+        #Creamos la preferencia de pago de MP
+        precio_total = price_calculator.segundos_a_pesos(sum([a.object_id.printing_time_default_total() for a in compra.purchased_objects.all()]))
+        mp_account = MPModels.Account.objects.first()
+        compra.payment_preferences = MPModels.Preference.objects.create(
+            title='Compra del {}'.format(compra.date),
+            price=precio_total,
+            description='Compra en Creame3D',
+            reference=str(compra.id),
+            account=mp_account)
+        #MP requiere email y nombre del comprador, de modo, que ingresamos esos datos
+        mp_client = mercadopago.MP(mp_account.app_id, mp_account.secret_key)
+        preference = {'payer': {'email': user.email if user.email != '' else 'compras@creame3d.com','name':user.username}}
+        preferenceResult = mp_client.update_preference(compra.payment_preferences.mp_id, preference)
+        #Devolvemos el resultado
+        compra.save()
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 '''
 Operations views

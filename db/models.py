@@ -5,6 +5,7 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 from .tools import import_from_thingi
 from .tools import stl_to_sfb
+from .tools import dbdispatcher
 from .render.blender import render_image
 import uuid
 import datetime
@@ -122,6 +123,9 @@ class Objeto(models.Model):
             translation = translate_client.translate(self.name,source_language='en',target_language='es')
             self.name_es = translation['translatedText']
             self.save()
+
+    def printing_time_default_total(self):
+        return sum([a.printing_time_default for a in self.files.all()])
 '''
 Modelos accesorios
 '''
@@ -254,6 +258,8 @@ class Color(models.Model):
     #Esta el color en stock?
     available = models.BooleanField(blank=True,default=True)
 
+    def __str__(self):
+        return self.name
 
 class Usuario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -273,16 +279,23 @@ def save_user_profile(sender, instance, **kwargs):
 
 class Compra(models.Model):
     estados = (
+        ('pending-payment', 'Pago pendiente'),
         ('accepted', 'Aceptado'),
         ('printing', 'Imprimiendo'),
         ('shipped', 'Enviado'),
     )
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    buyer = models.ForeignKey(Usuario,on_delete=models.CASCADE)
-    date = models.DateTimeField(default=datetime.datetime.now)
-    status = models.CharField(choices=estados,max_length=300)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,blank=True)
+    buyer = models.ForeignKey(Usuario,on_delete=models.CASCADE,blank=True,null=True)
+    date = models.DateTimeField(default=datetime.datetime.now,blank=True)
+    status = models.CharField(choices=estados,max_length=300,blank=True,default='pending-payment')
     delivery_address = models.CharField(max_length=300)
-    payment_preferences = models.ForeignKey(MPModels.Preference,on_delete=models.CASCADE)
+    payment_preferences = models.OneToOneField(MPModels.Preference,on_delete=models.CASCADE,blank=True,null=True)
+
+@receiver(post_save, sender=MPModels.Payment)
+def process_payment(sender, instance, created, **kwargs):
+    if instance.status == "approved":
+        compra = MPModels.Preference.objects.get(pk=instance.preference_id).compra
+        dbdispatcher.new_payment(compra)
 
 class ObjetoPersonalizado(models.Model):
     object_id = models.ForeignKey(Objeto,on_delete=models.PROTECT)
@@ -293,6 +306,8 @@ class ObjetoPersonalizado(models.Model):
 
     def name(self):
         return self.object_id.name
+
+
 '''
 Modelos externos
 '''
