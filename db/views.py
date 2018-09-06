@@ -129,7 +129,13 @@ class ListAllOrdersView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Compra.objects.filter(buyer=user.usuario)    
+        return Compra.objects.filter(buyer=user.usuario)
+
+class GetPreferenceInfoFromMP(APIView):
+    def get(self, request, mpid, format=None):
+        mp_account = MPModels.Account.objects.first()
+        mp_client = mercadopago.MP(mp_account.app_id, mp_account.secret_key)
+        return Response(mp_client.get_preference(mpid))
 
 class CreateOrderView(generics.CreateAPIView):
     serializer_class = CompraSerializer
@@ -144,7 +150,7 @@ class CreateOrderView(generics.CreateAPIView):
         user = request.user
         compra.buyer = user.usuario
         #Creamos la preferencia de pago de MP
-        precio_total = price_calculator.segundos_a_pesos(sum([a.object_id.printing_time_default_total() for a in compra.purchased_objects.all()]))
+        precio_total = price_calculator.get_order_price(compra)
         mp_account = MPModels.Account.objects.first()
         compra.payment_preferences = MPModels.Preference.objects.create(
             title='Compra del {}'.format(compra.date),
@@ -263,10 +269,3 @@ class MercadopagoSuccessUrl(generics.RetrieveAPIView):
         except MPModels.Notification.DoesNotExist:
              raise Http404
         return preference
-
-class MercadopagoReferenceBuilder(APIView):
-    def post(self, request, format=None):
-        #id = "288813417-c9777d09-6dd7-4f69-83d9-36575f327b16"
-        id = "288813417-9370a351-e7b5-49ab-81b2-de56dd77a668"
-        data = requests.get("https://api.mercadopago.com/checkout/preferences/{}?access_token=APP_USR-2260588880481871-082818-d51130abf80fe471884ba9a9701eb419-288813417".format(id)).json()
-        return Response(data)

@@ -79,6 +79,9 @@ class Polinomio(models.Model):
     def __str__(self):
         return "{} x^5+ {} x^4+ {} x^3+ {} x^2+ {} x+ {}".format(self.a5,self.a4,self.a3,self.a2,self.a1,self.a0)
 
+    def coefficients_list(self):
+        return [self.a5,self.a4,self.a3,self.a2,self.a1,self.a0]
+
 
 '''
 Clase de referencia externa. La idea es asignar id_externa al identificador que se utiliza en el repositorio indicado

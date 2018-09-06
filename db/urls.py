@@ -18,11 +18,11 @@ path('query/<str:query>/', views.SearchView.as_view())
 ]
 #List view
 urlpatterns += [
-path('list/object', views.ListAllObjectsView.as_view()),
-path('list/category', views.ListAllCategoriesView.as_view()),
-path('list/tag', views.ListAllTagsView.as_view()),
-path('list/orders', views.ListAllOrdersView.as_view()),
-path('list/colors',views.ListAllColorsView.as_view()),
+path('list/object/', views.ListAllObjectsView.as_view()),
+path('list/category/', views.ListAllCategoriesView.as_view()),
+path('list/tag/', views.ListAllTagsView.as_view()),
+path('list/orders/', views.ListAllOrdersView.as_view()),
+path('list/colors/',views.ListAllColorsView.as_view()),
 ]
 #Operations
 urlpatterns += [
@@ -31,7 +31,8 @@ path('update/like/<uuid:id>/',views.ToggleLike.as_view())
 #Ordenes
 urlpatterns += [
 path('orders/place/',views.CreateOrderView.as_view()),
-path('orders/list', views.ListAllOrdersView.as_view()),
+path('orders/list/', views.ListAllOrdersView.as_view()),
+path('orders/preference/<str:mpid>/',views.GetPreferenceInfoFromMP.as_view()),
 ]
 #External tools
 urlpatterns += [
@@ -47,5 +48,4 @@ url(r'^accounts/google/login/callback/$', views.GoogleLogin.as_view(), name='goo
 #Mercadopago
 urlpatterns += [
 path('mp/<str:pk>/', views.MercadopagoSuccessUrl.as_view(),name='success_url'),
-path('mp/builder',views.MercadopagoReferenceBuilder.as_view())
 ]
