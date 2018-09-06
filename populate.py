@@ -15,8 +15,8 @@ def populate():
     acc = MPAccount()
     acc.name = "Creame3DMP"
     acc.slug = "C3DMP"
-    acc.secret_key = "WOUOn19HfffVZWT3yYqWQLmnAVGp29W3"
-    acc.app_id = "2260588880481871"
+    acc.secret_key = "***REMOVED***"
+    acc.app_id = "***REMOVED***"
     acc.sandbox = True
     acc.save()
     print("Mecadopago added")

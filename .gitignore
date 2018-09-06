@@ -4,3 +4,4 @@ migrations
 media
 tmp
 server-dev.ini
+dbcreame/localenv.py

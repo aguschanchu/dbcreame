@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
 import os
+from .localenv import *
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,8 +27,6 @@ SECRET_KEY = '***REMOVED***'
 DEBUG = True
 
 ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1','192.168.1.2','agusc.ovh']
-CURRENT_HOST = 'agusc.ovh'
-CURRENT_PROTOCOL = 'https'
 CURRENT_PORT = 80
 SITE_ID = 3
 
