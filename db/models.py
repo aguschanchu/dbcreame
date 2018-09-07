@@ -12,6 +12,7 @@ import uuid
 import datetime
 import os
 import shutil
+import trimesh
 from multiprocessing import Pool
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -136,6 +137,7 @@ class Objeto(models.Model):
 
     def printing_time_default_total(self):
         return sum([a.printing_time_default for a in self.files.all()])
+
 '''
 Modelos accesorios
 '''
@@ -185,6 +187,13 @@ class ModeloAR(models.Model):
     def image_render(self):
         return self.modeloarrender.image_render
 
+    def combined_dimensions(self):
+        #Calcula la bounding_box sin orientar. Se puede cambiar por .bounding_box_oriented.primitive.transform
+        if self.human_flag:
+            return list(trimesh.load(settings.BASE_DIR+self.combined_stl.url).bounding_box.extents)
+        else:
+            return [0,0,0]
+
     #Si el modelo tiene un unico objeto, el STL combinado, es el mismo
     def check_for_single_object_file(self):
         if len(self.object.files.all()) == 1:
@@ -228,6 +237,7 @@ class ModeloAR(models.Model):
             self.sfb_file.save(sfb_path.split('/')[-1],File(f),save=False)
             self.save(update_fields=['sfb_file'])
             os.remove(sfb_path)
+
 
 class ModeloARRender(models.Model):
     image_render = models.FileField(upload_to='renders/',blank=True,null=True)

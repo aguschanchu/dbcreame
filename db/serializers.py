@@ -15,10 +15,12 @@ class ImagenSerializer(serializers.ModelSerializer):
         model = Imagen
         fields = ('photo',)
 
-class ModeloArSerializer(serializers.ModelSerializer):
+class ModeloArSerializer(serializers.ModelSerializer):    
+    combined_dimensions =  serializers.ListField(child=serializers.FloatField())
+
     class Meta:
         model = ModeloAR
-        fields = ('combined_stl','human_flag','sfb_file')
+        fields = ('combined_stl','human_flag','sfb_file','combined_dimensions')
 
 class ObjetoSerializer(serializers.ModelSerializer):
     #images = serializers.StringRelatedField(many=True)
@@ -35,13 +37,12 @@ class ObjetoSerializer(serializers.ModelSerializer):
     files = ArchivoSTLSerializer(many=True)
     images = ImagenSerializer(many=True)
     ar_model = ModeloArSerializer(source='modeloar')
-
     class Meta:
         depth = 4
         model = Objeto
         fields = ('id', 'name', 'name_es', 'description', 'like_count', 'main_image', 'images',
          'files', 'author', 'creation_date', 'category', 'tags', 'external_id', 'liked',
-         'hidden','ar_model')
+         'hidden','ar_model','printing_time_default_total')
 
 class ObjetoThingiSerializer(serializers.ModelSerializer):
     class Meta:
