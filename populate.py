@@ -15,10 +15,10 @@ def populate():
     acc = MPAccount()
     acc.name = "Creame3DMP"
     acc.slug = "C3DMP"
-    if settings.CURRENT_HOST == "agusc.ovh"
+    if settings.CURRENT_HOST == "agusc.ovh":
         acc.secret_key = "***REMOVED***"
         acc.app_id = "***REMOVED***"
-    elif settings.CURRENT_HOST == "api.creame3d.com"
+    elif settings.CURRENT_HOST == "api.creame3d.com":
         acc.secret_key = "***REMOVED***"
         acc.app_id = "***REMOVED***"
     else:
