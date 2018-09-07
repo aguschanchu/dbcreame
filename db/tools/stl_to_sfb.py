@@ -9,7 +9,7 @@ from django.core.files.base import ContentFile
 import random, string
 import gc
 
-def convert(stlpath,name):
+def convert(stlpath,name,rotate=False):
     '''
     El proceso de conversion a sfb consiste en
     1) Reescalar el stl con un factor 1/1000, ya que sfb asume que las unidades de los modelos están en metros
@@ -26,6 +26,9 @@ def convert(stlpath,name):
         raise Exception("Error al importar STL a trimesh")
     t = trimesh.transformations.scale_matrix(1/1000, [0,0,0])
     mesh.apply_transform(t)
+    if rotate:
+        t = trimesh.transformations.rotation_matrix(-np.pi/2, [1,0,0])
+        mesh.apply_transform(t)
     #Guardamos el STL transformado
     stl_path = settings.BASE_DIR + '/tmp/' + name.split('/')[-1].split('.')[0] + '.stl'
     with open(stl_path,'wb') as f:

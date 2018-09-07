@@ -15,12 +15,12 @@ class ImagenSerializer(serializers.ModelSerializer):
         model = Imagen
         fields = ('photo',)
 
-class ModeloArSerializer(serializers.ModelSerializer):    
+class ModeloArSerializer(serializers.ModelSerializer):
     combined_dimensions =  serializers.ListField(child=serializers.FloatField())
 
     class Meta:
         model = ModeloAR
-        fields = ('combined_stl','human_flag','sfb_file','combined_dimensions')
+        fields = ('combined_stl','human_flag','sfb_file','sfb_file_rotated','combined_dimensions')
 
 class ObjetoSerializer(serializers.ModelSerializer):
     #images = serializers.StringRelatedField(many=True)

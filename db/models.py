@@ -182,6 +182,7 @@ class ModeloAR(models.Model):
     #El combinado fue revisado por un humano?
     human_flag = models.BooleanField(blank=True,default=False)
     sfb_file = models.FileField(upload_to='sfb/',blank=True,null=True)
+    sfb_file_rotated = models.FileField(upload_to='sfb/',blank=True,null=True)
     object = models.OneToOneField(Objeto, on_delete=models.CASCADE,null=True)
 
     def image_render(self):
@@ -230,13 +231,15 @@ class ModeloAR(models.Model):
                     self.arrange_and_combine_files()
             else:
                 return False
-        with Pool(processes=1) as pool:
-            res = pool.apply_async(stl_to_sfb.convert,(settings.BASE_DIR+self.combined_stl.url,self.combined_stl.name))
-            sfb_path = res.get(timeout=30)
-        with open(sfb_path,'rb') as f:
-            self.sfb_file.save(sfb_path.split('/')[-1],File(f),save=False)
-            self.save(update_fields=['sfb_file'])
-            os.remove(sfb_path)
+        #Creamos ambos SFB
+        for field, fieldname, rotate in [(self.sfb_file,'sfb_file',False),(self.sfb_file_rotated,'sfb_file_rotated',True)]:
+            with Pool(processes=1) as pool:
+                res = pool.apply_async(stl_to_sfb.convert,(settings.BASE_DIR+self.combined_stl.url,self.combined_stl.name,rotate))
+                sfb_path = res.get(timeout=30)
+            with open(sfb_path,'rb') as f:
+                field.save(sfb_path.split('/')[-1],File(f),save=False)
+                self.save(update_fields=[fieldname])
+                os.remove(sfb_path)
 
 
 class ModeloARRender(models.Model):

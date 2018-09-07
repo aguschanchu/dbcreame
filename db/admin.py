@@ -51,7 +51,7 @@ class ModelARInline(admin.StackedInline):
     verbose_name = "Modelo AR"
     verbose_name_plural = verbose_name
     fk = "object"
-    list_display = ('name','combined_stl','sfb_file','human_flag')
+    list_display = ('name','combined_stl','sfb_file','sfb_file_rotated','human_flag')
     list_filter = ('human_flag',)
     readonly_fields = ('name','image','combined_stl')
 
@@ -61,7 +61,7 @@ class ModelARInline(admin.StackedInline):
         }),
         ('Archivos', {
             'classes': ('collapse',),
-            'fields': ('sfb_file',),
+            'fields': ('sfb_file','sfb_file_rotated'),
         })
     )
     def name(self,obj):
