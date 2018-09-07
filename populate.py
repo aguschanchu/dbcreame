@@ -57,7 +57,7 @@ def populate():
     print("API Keys (Thingiverse) added")
 
     #Color population
-    color_list = [('Verde oscuro','013100'),('Verde claro','12B50C'),('Amarillo','FFF208'),('Azul','0954F5'),('Celeste','0A73B8'),('Naranja','FF8400'),('Rojo','793A00'),('Gris','606060'),('Negro','000000'),('Blanco','FFFFFF')]
+    color_list = [('Blanco','FFFFFF'),('Verde oscuro','013100'),('Verde claro','12B50C'),('Amarillo','FFF208'),('Celeste','0A73B8'),('Azul','0954F5'),('Naranja','FF8400'),('Rojo','DD3A00'),('Gris','606060'),('Negro','000000')]
     for name, code in color_list:
         Color.objects.create(name=name,code=code)
     print("Colors added")
@@ -76,7 +76,7 @@ def populate():
         elif ans == "N":
             valid_input = True
     print("Objects added")
-    
+
     print("Migration finished successfully")
 
 def create_super_user(username, email, password):

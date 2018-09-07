@@ -90,6 +90,15 @@ def plot_poly(sender, instance, update_fields, **kwargs):
     if update_fields == None:
         polyplot(instance)
 
+class Color(models.Model):
+    name = models.CharField(max_length=100)
+    #Hex color code
+    code = models.CharField(max_length=6, validators=[MinLengthValidator(6)])
+    #Esta el color en stock?
+    available = models.BooleanField(blank=True,default=True)
+
+    def __str__(self):
+        return self.name
 
 '''
 Clase de referencia externa. La idea es asignar id_externa al identificador que se utiliza en el repositorio indicado
@@ -123,6 +132,22 @@ class Objeto(models.Model):
     external_id = models.OneToOneField(ReferenciaExterna,on_delete=models.SET_NULL,null=True)
     #Se muestra en el catalogo?
     hidden = models.BooleanField(default=False)
+    #Colores del objeto
+    default_color = models.ForeignKey(Color,on_delete=models.SET_NULL,null=True,blank=True,related_name='default_color')
+    popular_color = models.ForeignKey(Color,on_delete=models.SET_NULL,null=True,blank=True,related_name='popular_color')
+
+    def suggested_color(self):
+        if self.default_color != None:
+            return self.default_color.code
+        elif self.popular_color != None:
+            return self.popular_color.code
+        else:
+            return Color.objects.first().code
+
+    def update_popular_color(self):
+        colors_ordered = [a.color.id for a in ObjetoPersonalizado.objects.filter(object_id=self)]
+        self.popular_color = Color.objects.get(pk=max(colors_ordered,key=colors_ordered.count))
+        self.save()
 
     def view_main_image(self):
         return mark_safe('<img src="{}" width="400" height="300" />'.format(self.main_image.url))
@@ -287,16 +312,6 @@ def update_render_and_model(sender, instance, update_fields, **kwargs):
 Modelos de usuarios/compras
 '''
 
-class Color(models.Model):
-    name = models.CharField(max_length=100)
-    #Hex color code
-    code = models.CharField(max_length=6, validators=[MinLengthValidator(6)])
-    #Esta el color en stock?
-    available = models.BooleanField(blank=True,default=True)
-
-    def __str__(self):
-        return self.name
-
 class Usuario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -343,6 +358,11 @@ class ObjetoPersonalizado(models.Model):
     def name(self):
         return self.object_id.name
 
+#Utilizados para actualizar el color pricipal cuando se genera una orden nueva
+@receiver(post_save, sender=ObjetoPersonalizado)
+def update_suggested_color(sender, instance, created, **kwargs):
+    if created:
+        instance.object_id.update_popular_color()
 
 '''
 Modelos externos

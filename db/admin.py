@@ -76,14 +76,14 @@ class ObjetoAdmin(admin.ModelAdmin):
     list_display = ('name','author','external_id','total_printing_time_default','human_flag')
     raw_id_fields = ('author',)
     filter_horizontal = ('category','tags')
-    readonly_fields = ['view_main_image','total_printing_time_default']
+    readonly_fields = ['view_main_image','total_printing_time_default','popular_color']
     inlines = [ArchivoSTLInline,ImagenInline,ModelARInline]
     fieldsets = (
             (None, {
                 'fields': (('name','name_es'),)
                 }),
             (None, {
-                'fields': ('view_main_image',('author','like_count','total_printing_time_default','hidden'))
+                'fields': ('view_main_image',('author','like_count','total_printing_time_default','hidden'),('default_color','popular_color'))
                 }),
             ('Descripcion', {
                 'fields': ('description',),
