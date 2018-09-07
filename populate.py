@@ -15,8 +15,14 @@ def populate():
     acc = MPAccount()
     acc.name = "Creame3DMP"
     acc.slug = "C3DMP"
-    acc.secret_key = "***REMOVED***"
-    acc.app_id = "***REMOVED***"
+    if settings.CURRENT_HOST == "agusc.ovh"
+        acc.secret_key = "***REMOVED***"
+        acc.app_id = "***REMOVED***"
+    elif settings.CURRENT_HOST == "api.creame3d.com"
+        acc.secret_key = "***REMOVED***"
+        acc.app_id = "***REMOVED***"
+    else:
+        print("ERROR: No se encontraron configuraciones de MP para este dominio")
     acc.sandbox = True
     acc.save()
     print("Mecadopago added")
