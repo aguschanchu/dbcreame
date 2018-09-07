@@ -184,16 +184,15 @@ class ModeloAR(models.Model):
     sfb_file = models.FileField(upload_to='sfb/',blank=True,null=True)
     sfb_file_rotated = models.FileField(upload_to='sfb/',blank=True,null=True)
     object = models.OneToOneField(Objeto, on_delete=models.CASCADE,null=True)
+    combined_size_x = models.FloatField(blank=True,default=0)
+    combined_size_y = models.FloatField(blank=True,default=0)
+    combined_size_z = models.FloatField(blank=True,default=0)
 
     def image_render(self):
         return self.modeloarrender.image_render
 
     def combined_dimensions(self):
-        #Calcula la bounding_box sin orientar. Se puede cambiar por .bounding_box_oriented.primitive.transform
-        if self.human_flag:
-            return list(trimesh.load(settings.BASE_DIR+self.combined_stl.url).bounding_box.extents)
-        else:
-            return [0,0,0]
+        return [self.combined_size_x, self.combined_size_y, self.combined_size_z]
 
     #Si el modelo tiene un unico objeto, el STL combinado, es el mismo
     def check_for_single_object_file(self):
@@ -201,6 +200,7 @@ class ModeloAR(models.Model):
             self.combined_stl = self.object.files.all()[0].file
             self.human_flag = True
             self.save(update_fields=['combined_stl','human_flag'])
+            self.calculate_combined_dimensions()
             return True
         else:
             return False
@@ -222,6 +222,8 @@ class ModeloAR(models.Model):
             self.combined_stl.save(name,new_file,save=False)
             #Ejecutamos la funcion de guardar a parte, para que evitar un loop infinito con los signals
             self.save(update_fields=['combined_stl','human_flag'])
+            #Actualizamos el tamaño del objeto
+            self.calculate_combined_dimensions()
 
     def create_sfb(self,generate=False):
         if not self.combined_stl.name:
@@ -241,6 +243,17 @@ class ModeloAR(models.Model):
                 self.save(update_fields=[fieldname])
                 os.remove(sfb_path)
 
+    def calculate_combined_dimensions(self):
+        #Calcula la bounding_box sin orientar. Se puede cambiar por  .bounding_box_oriented.primitive.transform
+        if self.human_flag:
+            self.combined_size_x, self.combined_size_y, self.combined_size_z = list(trimesh.load(settings.BASE_DIR+self.combined_stl.url).bounding_box.extents)
+            self.save(update_fields=['combined_size_x','combined_size_y','combined_size_z'])
+
+#Utilizados para actualizar las dimensiones del objeto al cambiar el stl_combinado
+@receiver(post_save, sender=ModeloAR)
+def update_combined_dimensions(sender, instance, update_fields, **kwargs):
+    if instance.human_flag and 'combined_stl' in update_fields:
+        instance.calculate_combined_dimensions()
 
 class ModeloARRender(models.Model):
     image_render = models.FileField(upload_to='renders/',blank=True,null=True)

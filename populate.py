@@ -62,6 +62,21 @@ def populate():
         Color.objects.create(name=name,code=code)
     print("Colors added")
 
+    #Object population (for testing)
+    valid_input = False
+    while not valid_input:
+        print("Importo objetos de ejemplo? (slicerapi debe estar prendido)")
+        ans = input("Por favor, responde Y o N: ")
+        if ans == "Y":
+            valid_input = True
+            print("Importando objetos....")
+            add_object_from_thingiverse(1278865)
+            add_object_from_thingiverse(1179160)
+            add_object_from_thingiverse(2836304)
+        elif ans == "N":
+            valid_input = True
+    print("Objects added")
+    
     print("Migration finished successfully")
 
 def create_super_user(username, email, password):
@@ -86,4 +101,5 @@ if __name__ == '__main__':
     from django_mercadopago.models import Account as MPAccount
     from db.tools.import_from_thingi import *
     from db.models import *
+    from db.tools.import_from_thingi import *
     populate()

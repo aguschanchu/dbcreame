@@ -342,11 +342,7 @@ def import_from_thingiverse_parser(base):
 '''
 from db.tools.import_from_thingi import *
 from db.models import *
-***REMOVED***
-***REMOVED***
-***REMOVED***
-***REMOVED***
-add_objects(10)
-
-def dowload_thing(thingiid,file_list):
+import pickle
+with open('things_ids_complete.db','rb') as base:
+    import_from_thingiverse_parser(base)
 '''
