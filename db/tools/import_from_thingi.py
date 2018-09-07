@@ -150,6 +150,11 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     main_image_name = urlparse(url).path.split('/')[-1]
     ###Imagenes adicionales
     imagenes = []
+    #### Añadimos la main image a la image_list
+    imagen = modelos.Imagen()
+    imagen.photo.save(main_image_name,main_image)
+    imagenes.append(imagen)
+    #### Ahora, el resto de imagenes
     for j in range(1,len(rimg)):
         url = rimg[j]['sizes'][12]['url']
         name = urlparse(url).path.split('/')[-1]
@@ -191,7 +196,7 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
                         print(thing_file)
                         raise ValueError("Error al descargar archivo")
                     archivo = modelos.ArchivoSTL()
-                    archivo.file.save(referencia_externa.repository+'-'+str(referencia_externa.external_id)+'-'+name,ContentFile(rfile_src))
+                    archivo.file.save(referencia_externa.repository+'-'+str(referencia_externa.external_id),ContentFile(rfile_src))
                     archivos.append(archivo)
     ### Tenemos los archivos descargados. Necesitamos completar su tiempo de imp, peso, dimensiones
     print("Ejecutando trabajos de sliceo")
