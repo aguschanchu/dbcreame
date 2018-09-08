@@ -145,5 +145,5 @@ class UsuarioSerializer(serializers.ModelSerializer):
     address_book = DireccionDeEnvioSerializer(many=True,required=False)
     class Meta:
         model = Usuario
-        depth = 2
-        fields = '__all__'
+        depth = 1
+        fields = ('id','user','address_book','telephone')

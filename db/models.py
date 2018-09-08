@@ -396,7 +396,7 @@ class SfbRotationTracker(models.Model):
 @receiver(post_save, sender=SfbRotationTracker)
 def update_rotated_sfb(sender, instance, created, **kwargs):
     if created:
-        instance.object.ar_model.calculate_rotated()
+        instance.object.modeloar.calculate_rotated()
 
 '''
 Modelos externos

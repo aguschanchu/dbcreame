@@ -28,6 +28,8 @@ def populate():
     print("Mecadopago added")
 
     #Social accounts config
+    ##Site onfig
+    Site.objects.all()[0].delete()
     site = Site.objects.get_or_create(domain=settings.CURRENT_HOST,name=settings.CURRENT_HOST)[0]
     ##Google Config
     o = SocialApp()
