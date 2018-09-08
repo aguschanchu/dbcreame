@@ -326,7 +326,6 @@ class Usuario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     liked_objects = models.ManyToManyField(Objeto)
-    address = models.CharField(max_length=300)
 
 #Utilizados para actualizar el Usuario al cambiar el User de Django
 @receiver(post_save, sender=User)
@@ -337,6 +336,12 @@ def create_user_profile(sender, instance, created, **kwargs):
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     instance.usuario.save()
+
+class DireccionDeEnvio(models.Model):
+    usuario = models.ForeignKey(Usuario,on_delete=models.CASCADE)
+    last_time_used = models.DateTimeField(default=datetime.datetime.now,blank=True)
+    address = models.CharField(max_length=300,primary_key=True)
+    notes = models.CharField(max_length=300,blank=True,default=None,null=True)
 
 class Compra(models.Model):
     estados = (
@@ -349,7 +354,7 @@ class Compra(models.Model):
     buyer = models.ForeignKey(Usuario,on_delete=models.CASCADE,blank=True,null=True)
     date = models.DateTimeField(default=datetime.datetime.now,blank=True)
     status = models.CharField(choices=estados,max_length=300,blank=True,default='pending-payment')
-    delivery_address = models.CharField(max_length=300)
+    delivery_address = models.ForeignKey(DireccionDeEnvio,null=True,on_delete=models.SET_NULL,blank=True)
     payment_preferences = models.OneToOneField(MPModels.Preference,on_delete=models.CASCADE,blank=True,null=True)
 
 @receiver(post_save, sender=MPModels.Payment)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color, SfbRotationTracker
+from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio
 from django.contrib.auth.models import User, AnonymousUser
 from django_mercadopago import models as MPModels
 from django.db.utils import IntegrityError
@@ -88,18 +88,33 @@ class PaymentNotificationSerializer(serializers.ModelSerializer):
         model = MPModels.Notification
         fields = '__all__'
 
+class DireccionDeEnvioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DireccionDeEnvio
+        fields = '__all__'
+
 class CompraSerializer(serializers.ModelSerializer):
     purchased_objects = ObjetoPersonalizadoSerializer(many=True)
     payment_preferences = PaymentPreferencesSerializer(required=False, allow_null=True)
+    delivery_address = DireccionDeEnvioSerializer(required=False)
+    delivery_address_char = serializers.CharField(max_length=300, allow_null=True, required=False)
+    delivery_address_notes = serializers.CharField(max_length=300, allow_null=True, required=False)
 
     class Meta:
         model = Compra
-        fields = ('id','buyer','purchased_objects','date','status','delivery_address','payment_preferences')
+        fields = ('id','buyer','purchased_objects','date','status','delivery_address','payment_preferences', 'delivery_address_char', 'delivery_address_notes')
 
     #DRF no soporta creacion de objetos nesteados out-of-the-box, de modo, que reemplazamos el metodo de creacion
     def create(self, validated_data):
+        #Obtenemos DireccionDeEnvio a partir de delivery_address_char
+        delivery_address, created = DireccionDeEnvio.objects.get_or_create(address=validated_data.pop('delivery_address_char'),usuario=self.context['request'].user.usuario)
+        notes = validated_data.pop('delivery_address_notes')
+        if created:
+            delivery_address.notes = notes
+            delivery_address.save()
+        #Cargamos los objetos comprados
         purchased_objects_data = validated_data.pop('purchased_objects')
-        compra = Compra.objects.create(**validated_data)
+        compra = Compra.objects.create(delivery_address=delivery_address, **validated_data)
         for purchased_object_data in purchased_objects_data:
             ObjetoPersonalizado.objects.create(purchase=compra, **purchased_object_data)
         return compra
@@ -107,7 +122,6 @@ class CompraSerializer(serializers.ModelSerializer):
 '''
 Serializadores accesorios
 '''
-
 class ObjetoThingiSerializer(serializers.ModelSerializer):
     class Meta:
         model = ObjetoThingi

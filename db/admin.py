@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR, Color, SfbRotationTracker
+from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio
 from django.utils.html import format_html_join, format_html
 import trimesh
 
@@ -133,6 +133,10 @@ class ObjetoPersonalizadoAdmin(admin.ModelAdmin):
 class CompraAdmin(admin.ModelAdmin):
     list_display = ('date','status','buyer')
     ordering = ('date',)
+
+@admin.register(DireccionDeEnvio)
+class CompraAdmin(admin.ModelAdmin):
+    list_display = ('address','usuario','notes')
 
 @admin.register(Imagen)
 class ImagenAdmin(admin.ModelAdmin):
