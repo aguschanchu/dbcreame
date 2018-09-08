@@ -10,3 +10,7 @@ pyglet
 uwsgi
 https://github.com/mercadopago/sdk-python.git#egg=mercadopago
 django-mercadopago
+psycopg2
+psycopg2-binary
+matplotlib
+Pillow
