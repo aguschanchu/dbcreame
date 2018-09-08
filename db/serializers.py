@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from django.utils import timezone
+import datetime
 from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio
 from django.contrib.auth.models import User, AnonymousUser
 from django_mercadopago import models as MPModels
@@ -55,11 +57,6 @@ class CategoriaSerializer(serializers.ModelSerializer):
         model = Categoria
         fields = '__all__'
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ('username',)
-
 
 '''
 Definimos el serializador de Compra con un poco mas de cuidado, para poder serializar
@@ -91,7 +88,7 @@ class PaymentNotificationSerializer(serializers.ModelSerializer):
 class DireccionDeEnvioSerializer(serializers.ModelSerializer):
     class Meta:
         model = DireccionDeEnvio
-        fields = '__all__'
+        fields = ('address','notes','last_time_used')
 
 class CompraSerializer(serializers.ModelSerializer):
     purchased_objects = ObjetoPersonalizadoSerializer(many=True)
@@ -108,10 +105,15 @@ class CompraSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         #Obtenemos DireccionDeEnvio a partir de delivery_address_char
         delivery_address, created = DireccionDeEnvio.objects.get_or_create(address=validated_data.pop('delivery_address_char'),usuario=self.context['request'].user.usuario)
-        notes = validated_data.pop('delivery_address_notes')
+        notes = validated_data.pop('delivery_address_notes') if 'delivery_address_notes' in validated_data.keys() else None
         if created:
             delivery_address.notes = notes
-            delivery_address.save()
+        ## Actualizamos la ultima vez que se uso esta direccion
+        else:
+            delivery_address.last_time_used = datetime.datetime.now()
+            if notes != None:
+                delivery_address.notes = notes
+        delivery_address.save()
         #Cargamos los objetos comprados
         purchased_objects_data = validated_data.pop('purchased_objects')
         compra = Compra.objects.create(delivery_address=delivery_address, **validated_data)
@@ -122,6 +124,7 @@ class CompraSerializer(serializers.ModelSerializer):
 '''
 Serializadores accesorios
 '''
+
 class ObjetoThingiSerializer(serializers.ModelSerializer):
     class Meta:
         model = ObjetoThingi
@@ -130,4 +133,17 @@ class ObjetoThingiSerializer(serializers.ModelSerializer):
 class SfbRotationTrackerSerializer(serializers.ModelSerializer):
     class Meta:
         model = SfbRotationTracker
+        fields = '__all__'
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('username','first_name','last_name','email','date_joined')
+
+class UsuarioSerializer(serializers.ModelSerializer):
+    user = UserSerializer(required=False)
+    address_book = DireccionDeEnvioSerializer(many=True,required=False)
+    class Meta:
+        model = Usuario
+        depth = 2
         fields = '__all__'

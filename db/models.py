@@ -325,6 +325,7 @@ Modelos de usuarios/compras
 class Usuario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    telephone = models.CharField(max_length=100,blank=True,null=True)
     liked_objects = models.ManyToManyField(Objeto)
 
 #Utilizados para actualizar el Usuario al cambiar el User de Django
@@ -338,10 +339,13 @@ def save_user_profile(sender, instance, **kwargs):
     instance.usuario.save()
 
 class DireccionDeEnvio(models.Model):
-    usuario = models.ForeignKey(Usuario,on_delete=models.CASCADE)
-    last_time_used = models.DateTimeField(default=datetime.datetime.now,blank=True)
+    usuario = models.ForeignKey(Usuario,on_delete=models.CASCADE,related_name='address_book')
+    last_time_used = models.DateTimeField(default=timezone.now,blank=True)
     address = models.CharField(max_length=300,primary_key=True)
     notes = models.CharField(max_length=300,blank=True,default=None,null=True)
+
+    class Meta:
+        ordering = ['last_time_used']
 
 class Compra(models.Model):
     estados = (
@@ -352,7 +356,7 @@ class Compra(models.Model):
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,blank=True)
     buyer = models.ForeignKey(Usuario,on_delete=models.CASCADE,blank=True,null=True)
-    date = models.DateTimeField(default=datetime.datetime.now,blank=True)
+    date = models.DateTimeField(default=timezone.now,blank=True)
     status = models.CharField(choices=estados,max_length=300,blank=True,default='pending-payment')
     delivery_address = models.ForeignKey(DireccionDeEnvio,null=True,on_delete=models.SET_NULL,blank=True)
     payment_preferences = models.OneToOneField(MPModels.Preference,on_delete=models.CASCADE,blank=True,null=True)

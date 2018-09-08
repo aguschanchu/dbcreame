@@ -27,7 +27,9 @@ path('list/colors/',views.ListAllColorsView.as_view()),
 #Operations
 urlpatterns += [
 path('update/like/<uuid:id>/',views.ToggleLike.as_view()),
-path('update/rotate_ar_model/',views.ToggleRotated.as_view())
+path('update/rotate_ar_model/',views.ToggleRotated.as_view()),
+path('profile/',views.UserInformationView.as_view()),
+
 ]
 #Ordenes
 urlpatterns += [
