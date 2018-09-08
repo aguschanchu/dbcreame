@@ -1,9 +1,10 @@
 from rest_framework import serializers
-from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color
+from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color, SfbRotationTracker
 from django.contrib.auth.models import User, AnonymousUser
 from django_mercadopago import models as MPModels
 from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
+
 class ArchivoSTLSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArchivoSTL
@@ -20,7 +21,7 @@ class ModeloArSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ModeloAR
-        fields = ('combined_stl','human_flag','sfb_file','sfb_file_rotated','combined_dimensions')
+        fields = ('combined_stl','human_flag','sfb_file','sfb_file_rotated','combined_dimensions','rotated')
 
 class ObjetoSerializer(serializers.ModelSerializer):
     #images = serializers.StringRelatedField(many=True)
@@ -43,11 +44,6 @@ class ObjetoSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'name_es', 'description', 'like_count', 'main_image', 'images',
          'files', 'author', 'creation_date', 'category', 'tags', 'external_id', 'liked',
          'hidden','ar_model','printing_time_default_total','suggested_color')
-
-class ObjetoThingiSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ObjetoThingi
-        fields = ('id', 'external_id', 'status', 'file_list')
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
@@ -107,3 +103,17 @@ class CompraSerializer(serializers.ModelSerializer):
         for purchased_object_data in purchased_objects_data:
             ObjetoPersonalizado.objects.create(purchase=compra, **purchased_object_data)
         return compra
+
+'''
+Serializadores accesorios
+'''
+
+class ObjetoThingiSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ObjetoThingi
+        fields = ('id', 'external_id', 'status', 'file_list')
+
+class SfbRotationTrackerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SfbRotationTracker
+        fields = '__all__'

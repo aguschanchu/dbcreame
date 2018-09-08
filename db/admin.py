@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR, Color
+from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR, Color, SfbRotationTracker
 from django.utils.html import format_html_join, format_html
 import trimesh
 
@@ -111,6 +111,10 @@ class ObjetoAdmin(admin.ModelAdmin):
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
     list_display = ('user',)
+
+@admin.register(SfbRotationTracker)
+class UsuarioAdmin(admin.ModelAdmin):
+    list_display = ('object','rotated','usuario')
 
 @admin.register(Color)
 class ColorAdmin(admin.ModelAdmin):

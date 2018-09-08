@@ -200,7 +200,6 @@ class Imagen(models.Model):
     def view_image(self):
         return mark_safe('<img src="{}" width="400" height="300" />'.format(self.photo.url))
 
-
 #Contiene los archivos necesarios para la visualizacion AR de cada Objeto
 class ModeloAR(models.Model):
     combined_stl = models.FileField(upload_to='stl/',blank=True,null=True)
@@ -208,6 +207,8 @@ class ModeloAR(models.Model):
     human_flag = models.BooleanField(blank=True,default=False)
     sfb_file = models.FileField(upload_to='sfb/',blank=True,null=True)
     sfb_file_rotated = models.FileField(upload_to='sfb/',blank=True,null=True)
+    #Indica si muchos usuarios solicitaron rotar el objeto
+    rotated = models.BooleanField(blank=True,default=False)
     object = models.OneToOneField(Objeto, on_delete=models.CASCADE,null=True)
     combined_size_x = models.FloatField(blank=True,default=0)
     combined_size_y = models.FloatField(blank=True,default=0)
@@ -218,6 +219,13 @@ class ModeloAR(models.Model):
 
     def combined_dimensions(self):
         return [self.combined_size_x, self.combined_size_y, self.combined_size_z]
+
+    def calculate_rotated(self):
+        tracked_rotations = [a.rotated for a in SfbRotationTracker.objects.filter(object=self.object)]
+        #A partir de 4 podemos usar LGN
+        if len(tracked_rotations) > 0:
+            self.rotated = True if tracked_rotations.count(True)/len(tracked_rotations) > 0.5 else False
+        self.save(update_fields=['rotated'])
 
     #Si el modelo tiene un unico objeto, el STL combinado, es el mismo
     def check_for_single_object_file(self):
@@ -277,6 +285,8 @@ class ModeloAR(models.Model):
 #Utilizados para actualizar las dimensiones del objeto al cambiar el stl_combinado
 @receiver(post_save, sender=ModeloAR)
 def update_combined_dimensions(sender, instance, update_fields, **kwargs):
+    if update_fields == None:
+        return False
     if instance.human_flag and 'combined_stl' in update_fields:
         instance.calculate_combined_dimensions()
 
@@ -363,6 +373,21 @@ class ObjetoPersonalizado(models.Model):
 def update_suggested_color(sender, instance, created, **kwargs):
     if created:
         instance.object_id.update_popular_color()
+
+'''
+Modelos de trackeo
+'''
+
+#Trackear si los usuarios rotaron el objeto, o no
+class SfbRotationTracker(models.Model):
+    object = models.ForeignKey(Objeto, on_delete=models.CASCADE)
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE,blank=True)
+    rotated = models.BooleanField()
+
+@receiver(post_save, sender=SfbRotationTracker)
+def update_rotated_sfb(sender, instance, created, **kwargs):
+    if created:
+        instance.object.ar_model.calculate_rotated()
 
 '''
 Modelos externos

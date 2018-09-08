@@ -196,7 +196,7 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
                         print(thing_file)
                         raise ValueError("Error al descargar archivo")
                     archivo = modelos.ArchivoSTL()
-                    archivo.file.save(referencia_externa.repository+'-'+str(referencia_externa.external_id),ContentFile(rfile_src))
+                    archivo.file.save(referencia_externa.repository+'-'+str(referencia_externa.external_id)+'.stl',ContentFile(rfile_src))
                     archivos.append(archivo)
     ### Tenemos los archivos descargados. Necesitamos completar su tiempo de imp, peso, dimensiones
     print("Ejecutando trabajos de sliceo")

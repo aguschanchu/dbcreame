@@ -1,5 +1,5 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer
-from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado
+from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer
+from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado, SfbRotationTracker
 from rest_framework import generics, status, pagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -206,6 +206,28 @@ class ToggleLike(generics.UpdateAPIView):
         serializer = ObjetoSerializer(objeto,context={'request': request})
         print(serializer)
         return Response(serializer.data)
+
+class ToggleRotated(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = SfbRotationTrackerSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        #Existe ya la instancia en la DB? De ser así, actualizamos
+        if SfbRotationTracker.objects.filter(object=serializer.validated_data['object'],usuario=request.user.usuario.id).exists():
+            obj = SfbRotationTracker.objects.get(object=serializer.validated_data['object'],usuario=request.user.usuario.id)
+            obj.rotated = serializer.validated_data['rotated']
+            obj.save()
+        else:
+            SfbRotationTracker.objects.create(object=serializer.validated_data['object'],usuario=request.user.usuario,rotated=serializer.validated_data['rotated'])
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+
+
+
 
 '''
 DB Operations view
