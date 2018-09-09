@@ -27,7 +27,6 @@ SECRET_KEY = '***REMOVED***'
 DEBUG = True
 
 ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1','192.168.1.2','agusc.ovh']
-CURRENT_PORT = 80
 
 # Application definition
 
@@ -165,7 +164,6 @@ AUTHENTICATION_BACKENDS = (
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = '/static/'
-
 MEDIA_ROOT = 'media/'
 MEDIA_URL = '/media/'
 
@@ -173,9 +171,9 @@ MEDIA_URL = '/media/'
 SOCIALACCOUNT_EMAIL_VERIFICATION = None
 SOCIALACCOUNT_EMAIL_REQUIRED = False
 SOCIALACCOUNT_QUERY_EMAIL = True
+ACCOUNT_EMAIL_VERIFICATION = None
 
 #MercadoLibre configuration
-
 MERCADOPAGO = {
     'autoprocess': True,
     'success_url': 'db:success_url',
