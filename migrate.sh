@@ -2,6 +2,7 @@ rm -r db/migrations media tmp
 mkdir media tmp
 mkdir media/images media/renders media/sfb media/stl
 mkdir media/images/plots
+chmod 777 -R media tmp
 #PSQL DB preparation
 sudo -u postgres -H -- psql -c "DROP DATABASE dbapi"
 sudo -u postgres -H -- psql -c "CREATE USER dbapi WITH PASSWORD '***REMOVED***'"

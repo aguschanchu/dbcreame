@@ -96,6 +96,8 @@ class Color(models.Model):
     code = models.CharField(max_length=6, validators=[MinLengthValidator(6)])
     #Esta el color en stock?
     available = models.BooleanField(blank=True,default=True)
+    #Referencia de color para los modelos de AR (es un cubo en sfb)
+    sfb_color_reference = models.FileField(upload_to='sfb/',null=True,blank=True)
 
     def __str__(self):
         return self.name

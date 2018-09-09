@@ -58,16 +58,33 @@ def populate():
     ***REMOVED***
     print("API Keys (Thingiverse) added")
 
+    print("Initiating colors population...")
     #Color population
-    color_list = [('Blanco','FFFFFF'),('Verde oscuro','013100'),('Verde claro','12B50C'),('Amarillo','FFF208'),('Celeste','0A73B8'),('Azul','0954F5'),('Naranja','FF8400'),('Rojo','DD3A00'),('Gris','606060'),('Negro','000000')]
+    color_list = [('Blanco','FFFFFF'),('Verde oscuro','013100'),('Verde claro','12B50C'),('Celeste','0A73B8'),('Amarillo','FFF208'),('Azul','0954F5'),('Naranja','FF8400'),('Rojo','793A00'),('Gris','606060'),('Negro','000000')]
     for name, code in color_list:
-        Color.objects.create(name=name,code=code)
+        color = Color.objects.create(name=name,code=code)
+        #Convertimos el par obj, mtl a SFB
+        args = [settings.BASE_DIR + '/lib/sceneform_sdk/linux/converter','-d','--mat',settings.BASE_DIR + '/lib/sceneform_sdk/default_materials/obj_material.sfm',
+        '--outdir', settings.BASE_DIR + '/tmp/',settings.BASE_DIR + '/resources/colors_reference/' + code + '.obj']
+        proc = subprocess.run(args,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        #Se proceso correctamente?
+        for line in proc.stdout.splitlines():
+            if 'Wrote SFB to' in line:
+                break
+        else:
+            print(proc)
+            print("Error al exportar SFB para el color {}".format(name))
+        #Devolvemos el path del sfb
+        sfb_path = settings.BASE_DIR + '/tmp/' + code + '.sfb'
+        with open(sfb_path,'rb') as f:
+            color.sfb_color_reference.save(code + '.sfb',File(f))
+        os.remove(sfb_path)
     print("Colors added")
 
     #Object population (for testing)
     valid_input = False
     while not valid_input:
-        print("Importo objetos de ejemplo? (slicerapi debe estar prendido)")
+        print("\nImporto objetos de ejemplo? (slicerapi debe estar prendido)")
         ans = input("Por favor, responde Y o N: ")
         if ans == "Y":
             valid_input = True
@@ -103,5 +120,7 @@ if __name__ == '__main__':
     from django_mercadopago.models import Account as MPAccount
     from db.tools.import_from_thingi import *
     from db.models import *
+    from django.core.files import File
     from db.tools.import_from_thingi import *
+    import os, subprocess
     populate()
