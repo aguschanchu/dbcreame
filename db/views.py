@@ -137,7 +137,7 @@ class GetPreferenceInfoFromMP(APIView):
     def get(self, request, mpid, format=None):
         mp_account = MPModels.Account.objects.first()
         mp_client = mercadopago.MP(mp_account.app_id, mp_account.secret_key)
-        return Response(mp_client.get_preference(mpid))
+        return Response(mp_client.get_preference(mpid)['response'])
 
 class CreateOrderView(generics.CreateAPIView):
     serializer_class = CompraSerializer
