@@ -134,7 +134,7 @@ class ListAllOrdersView(generics.ListAPIView):
         return Compra.objects.filter(buyer=user.usuario)
 
 class GetPreferenceInfoFromMP(APIView):
-    def get(self, request, mpid, format=None):
+    def post(self, request, mpid, format=None):
         mp_account = MPModels.Account.objects.first()
         mp_client = mercadopago.MP(mp_account.app_id, mp_account.secret_key)
         return Response(mp_client.get_preference(mpid)['response'])
