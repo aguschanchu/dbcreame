@@ -83,7 +83,7 @@ class ObjetoAdmin(admin.ModelAdmin):
                 'fields': (('name','name_es'),)
                 }),
             (None, {
-                'fields': ('view_main_image',('author','like_count','total_printing_time_default','hidden'),('default_color','popular_color'))
+                'fields': ('view_main_image',('author','like_count','total_printing_time_default','discount','hidden'),('default_color','popular_color'))
                 }),
             ('Descripcion', {
                 'fields': ('description',),

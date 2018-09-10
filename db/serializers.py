@@ -147,3 +147,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
         model = Usuario
         depth = 1
         fields = ('id','user','address_book','telephone')
+
+class AppSetupInformationSerializer(serializers.Serializer):
+    price_per_hour = serializers.FloatField(read_only=True)
+    discount_parameter_a = serializers.FloatField(read_only=True)
+    discount_parameter_b = serializers.FloatField(read_only=True)

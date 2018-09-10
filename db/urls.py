@@ -39,7 +39,8 @@ path('orders/preference/<str:mpid>/',views.GetPreferenceInfoFromMP.as_view()),
 ]
 #External tools
 urlpatterns += [
-path('tools/add_object_from_thingiverse/',views.AddObjectFromThingiverse.as_view())
+path('tools/add_object_from_thingiverse/',views.AddObjectFromThingiverse.as_view()),
+path('information/setup',views.SendAppSetupInformation.as_view()),
 ]
 #Auth
 urlpatterns += [

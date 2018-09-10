@@ -1,6 +1,6 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer
+from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer
 from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado, SfbRotationTracker, Usuario
-from rest_framework import generics, status, pagination
+from rest_framework import generics, status, pagination, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
@@ -277,6 +277,11 @@ class AddObjectFromThingiverse(APIView):
             return Response(ObjetoThingiSerializer(obj).data)
         return Response(serializer.errors)
 
+class SendAppSetupInformation(APIView):
+    def get(self, request, format=None):
+        serializer = AppSetupInformationSerializer(price_calculator.obtener_parametros_de_precios())
+        return Response(serializer.data)
+        
 '''
 Social login views
 '''

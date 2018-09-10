@@ -186,4 +186,9 @@ MERCADOPAGO = {
 #Configuraciones adicionales
 SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'
 THINGIVERSE_API_ENDPOINT = 'https://api.thingiverse.com/'
+
+#Configuraciones de precios
 PRECIO_POR_HORA_DE_IMPRESION = 40
+## Configuracion de descuento por volumen precio_c_descuento = a*(precio_sin_descuento)^b
+PRECIO_DESCUENTO_VOLUMEN_A = 1
+PRECIO_DESCUENTO_VOLUMEN_B = 1

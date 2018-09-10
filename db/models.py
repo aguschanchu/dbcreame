@@ -134,6 +134,8 @@ class Objeto(models.Model):
     external_id = models.OneToOneField(ReferenciaExterna,on_delete=models.SET_NULL,null=True)
     #Se muestra en el catalogo?
     hidden = models.BooleanField(default=False)
+    #Tiene algun descuento particular? precio_descontado = precio * discount
+    discount = models.FloatField(blank=True,default=1)
     #Colores del objeto
     default_color = models.ForeignKey(Color,on_delete=models.SET_NULL,null=True,blank=True,related_name='default_color')
     popular_color = models.ForeignKey(Color,on_delete=models.SET_NULL,null=True,blank=True,related_name='popular_color')
@@ -162,8 +164,9 @@ class Objeto(models.Model):
             self.name_es = translation['translatedText']
             self.save()
 
+    #En lugar de sumar default_printing_time, evaluamos tiempo(escala) en 1. Esto, es para evitar difierencias al usar el polinomio
     def printing_time_default_total(self):
-        return sum([a.printing_time_default for a in self.files.all()])
+        return round(sum([sum(a.time_as_a_function_of_scale.coefficients_list()) for a in self.files.all()]))
 
 '''
 Modelos accesorios
