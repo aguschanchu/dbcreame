@@ -66,7 +66,7 @@ en forma nesteada una compra; simplificando la creacion de estas.
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Color
-        fields = ('id','name','code','available')
+        fields = ('id','name','code','available','sfb_color_reference')
 
 class ObjetoPersonalizadoSerializer(serializers.ModelSerializer):
     #olor = serializers.PrimaryKeyRelatedField(read_only=True)
