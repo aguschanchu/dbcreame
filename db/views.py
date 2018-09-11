@@ -229,22 +229,13 @@ class ToggleRotated(generics.CreateAPIView):
 class UserInformationView(generics.RetrieveUpdateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = UsuarioSerializer
-
     def get_object(self):
         return Usuario.objects.get(pk=self.request.user.usuario.id)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
-        if 'user' in request.data.keys():
-            #Actualizamos datos de User
-            instance = self.get_object().user
-            serializer = UserSerializer(instance, data=request.data['user'], partial=partial)
-            serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
-            request.data.pop('user')
-        #Actualizamos datos de Usuario
         instance = self.get_object()
-        serializer = UsuarioSerializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial, context={'request': request})
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
@@ -253,7 +244,7 @@ class UserInformationView(generics.RetrieveUpdateAPIView):
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
 
-        return self.retrieve(self, request, *args, **kwargs)
+        return Response(serializer.data)
 
 '''
 DB Operations view
@@ -281,7 +272,7 @@ class SendAppSetupInformation(APIView):
     def get(self, request, format=None):
         serializer = AppSetupInformationSerializer(price_calculator.obtener_parametros_de_precios())
         return Response(serializer.data)
-        
+
 '''
 Social login views
 '''

@@ -141,12 +141,34 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('username','first_name','last_name','email','date_joined')
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    user = UserSerializer(required=False)
+    id = serializers.IntegerField(source='user.id', required=False)
+    username = serializers.CharField(source='user.username', required=False)
+    first_name = serializers.CharField(source='user.first_name', required=False)
+    last_name = serializers.CharField(source='user.last_name', required=False)
+    email = serializers.CharField(source='user.email', required=False)
+    date_joined = serializers.DateTimeField(source='user.username', required=False)
     address_book = DireccionDeEnvioSerializer(many=True,required=False)
+
     class Meta:
         model = Usuario
         depth = 1
-        fields = ('id','user','address_book','telephone')
+        fields = ('id','username','first_name','last_name','email','date_joined','address_book','telephone')
+
+    def update(self, instance, validated_data):
+        user = self.context['request'].user
+        #Actualizamos el User
+        for key, value in validated_data['user'].items():
+            #Unicamente permitimos que cambien ciertos atributos de usuario
+            if key in ['first_name', 'last_name', 'email']:
+                setattr(user, key, value)
+        #Actualizamos el Usuario
+        if 'telephone' in validated_data.keys():
+            user.usuario.telephone = validated_data['telephone']
+        user.save()
+        return user.usuario
+
+
+
 
 class AppSetupInformationSerializer(serializers.Serializer):
     price_per_hour = serializers.FloatField(read_only=True)
