@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.facebook',
     'allauth.socialaccount.providers.google',
+    #Procesamiento de imagenes
+    'imagekit',
     #Mercadochorros
     'django_mercadopago',
     #Aplicaciones propias

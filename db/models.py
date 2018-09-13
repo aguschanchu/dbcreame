@@ -21,6 +21,9 @@ from django.conf import settings
 from google.cloud import translate
 from django_mercadopago import models as MPModels
 from django.core.validators import MinLengthValidator
+from imagekit.models import ImageSpecField
+from imagekit.processors import ResizeToFit
+
 
 '''
 Modelos internos (almacenados en la DB)
@@ -127,6 +130,7 @@ class Objeto(models.Model):
     description = models.TextField(blank=True,null=True)
     like_count = models.IntegerField(blank=True,default=0)
     main_image = models.ImageField(upload_to='images/')
+    main_image_thumbnail = ImageSpecField(source='main_image', processors=[ResizeToFit(width=800, height=600, upscale=False)], format='JPEG', options={'quality': 40})
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
     creation_date = models.DateTimeField(default=timezone.now)
     category = models.ManyToManyField(Categoria)
@@ -330,7 +334,7 @@ Modelos de usuarios/compras
 class Usuario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    telephone = models.CharField(max_length=100,blank=True,null=True)
+    telephone = models.CharField(max_length=100,blank=True,null=True,default="")
     liked_objects = models.ManyToManyField(Objeto)
 
 #Utilizados para actualizar el Usuario al cambiar el User de Django

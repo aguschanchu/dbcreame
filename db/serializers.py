@@ -6,6 +6,7 @@ from django.contrib.auth.models import User, AnonymousUser
 from django_mercadopago import models as MPModels
 from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
+from django.conf import settings
 
 class ArchivoSTLSerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,13 +38,18 @@ class ObjetoSerializer(serializers.ModelSerializer):
             return False
     liked = serializers.SerializerMethodField('liked_get')
 
+    def main_image_thumbnail_url(self,obj):
+        base_url = settings.CURRENT_PROTOCOL+ '://' + settings.CURRENT_HOST + ':' + str(settings.CURRENT_PORT)
+        return base_url + obj.main_image_thumbnail.url
+
+    main_image_thumbnail = serializers.SerializerMethodField('main_image_thumbnail_url')
     files = ArchivoSTLSerializer(many=True)
     images = ImagenSerializer(many=True)
     ar_model = ModeloArSerializer(source='modeloar')
     class Meta:
         depth = 4
         model = Objeto
-        fields = ('id', 'name', 'name_es', 'description', 'like_count', 'main_image', 'images',
+        fields = ('id', 'name', 'name_es', 'description', 'like_count', 'main_image', 'main_image_thumbnail', 'images',
          'files', 'author', 'creation_date', 'category', 'tags', 'external_id', 'liked',
          'hidden','ar_model','printing_time_default_total','suggested_color','discount')
 

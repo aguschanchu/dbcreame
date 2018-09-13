@@ -14,3 +14,4 @@ psycopg2
 psycopg2-binary
 matplotlib
 Pillow
+django-imagekit
