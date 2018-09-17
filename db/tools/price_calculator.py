@@ -23,7 +23,7 @@ def get_order_price(compra):
                 print(archivostl.time_as_a_function_of_scale.coefficients_list())
                 object_total_seconds += p(objeto_personalizado.scale)
         total_price += segundos_a_pesos(object_total_seconds) * objeto_personalizado.quantity * objeto_personalizado.object_id.discount
-    return total_price
+    return total_price - total_price % 5
 
 def obtener_parametros_de_precios():
     return {'price_per_hour' : settings.PRECIO_POR_HORA_DE_IMPRESION,
