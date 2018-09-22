@@ -34,26 +34,27 @@ class ApiKey(models.Model):
         #¿Es valida?
         r = requests.get(settings.THINGIVERSE_API_ENDPOINT+'things/763622?access_token='+str(self.key)).json()
         if 'Unauthorized' in r.values():
-            raise ValidationError(_('API key invalida'))
+            raise ValidationError('API key invalida')
 
     def make_query(self):
         event = QueryEvent.objects.create()
         self.meter.add(event)
 
-    def available(self):
+    def available(self, count=1):
         #Actualizamos la tabla de meters:
         for event in self.meter.all():
             if (datetime.datetime.now(datetime.timezone.utc)-event.date).seconds > self.quota_interval:
                 event.delete()
-        if len(self.meter.all()) < self.quota:
+        if len(self.meter.all()) + count <= self.quota:
             return True
         else:
             return False
 
-def get_api_key():
+def get_api_key(count=1):
     for key in ApiKey.objects.all():
-        if key.available():
-            key.make_query()
+        if key.available(count):
+            for _ in range(0,count):
+                key.make_query()
             return key.key
         else:
             return None

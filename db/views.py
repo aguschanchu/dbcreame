@@ -1,4 +1,4 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer
+from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer, ThingiverseAPIKeyRequestSerializer
 from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado, SfbRotationTracker, Usuario
 from rest_framework import generics, status, pagination, serializers
 from rest_framework.views import APIView
@@ -272,6 +272,18 @@ class SendAppSetupInformation(APIView):
     def get(self, request, format=None):
         serializer = AppSetupInformationSerializer(price_calculator.obtener_parametros_de_precios())
         return Response(serializer.data)
+
+class ThingiverseAPIKeyRequestView(APIView):
+    permission_classes = (IsAdminUser,)
+
+    def post(self, request, format=None):
+        serializer = ThingiverseAPIKeyRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            if not 'uses' in serializer.validated_data.keys():
+                serializer.validated_data['uses'] = 1
+            serializer.validated_data['api_key'] = import_from_thingi.get_api_key(serializer.validated_data['uses'])
+            return Response(serializer.data)
+        return Response(serializer.errors)
 
 '''
 Social login views

@@ -42,7 +42,7 @@ class ObjetoSerializer(serializers.ModelSerializer):
         if settings.CURRENT_HOST not in ['80','443']:
             base_url = settings.CURRENT_PROTOCOL+ '://' + settings.CURRENT_HOST + ':' + str(settings.CURRENT_PORT)
         else:
-            base_url = settings.CURRENT_PROTOCOL+ '://' + settings.CURRENT_HOST         
+            base_url = settings.CURRENT_PROTOCOL+ '://' + settings.CURRENT_HOST
         return base_url + obj.main_image_thumbnail.url
 
     main_image_thumbnail = serializers.SerializerMethodField('main_image_thumbnail_url')
@@ -176,10 +176,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
         user.save()
         return user.usuario
 
-
-
-
 class AppSetupInformationSerializer(serializers.Serializer):
     price_per_hour = serializers.FloatField(read_only=True)
     discount_parameter_a = serializers.FloatField(read_only=True)
     discount_parameter_b = serializers.FloatField(read_only=True)
+
+class ThingiverseAPIKeyRequestSerializer(serializers.Serializer):
+    uses = serializers.IntegerField(required=False)
+    api_key = serializers.CharField(read_only=True)
