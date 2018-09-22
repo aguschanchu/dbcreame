@@ -265,7 +265,7 @@ class AddObjectFromThingiverse(APIView):
                 traceback.print_exc()
                 obj.status = 'error'
             obj.save()
-            return Response(ObjetoThingiSerializer(obj).data)
+            return Response(ObjetoThingiSerializer(obj).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors)
 
 class SendAppSetupInformation(APIView):

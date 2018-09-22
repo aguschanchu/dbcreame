@@ -175,10 +175,12 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     elif type(file_list) == list:
         pass
     else:
-        file_list = json.loads(file_list)
+        file_list = [int(a) for a in json.loads(file_list)]
     ### Nos pasaron una lista de archivos valida?
     for id in file_list:
         if id not in files_available_id:
+            print("IDs disponibles:")
+            print(files_available_id)
             raise ValueError("IDs de archivos invalida: "+id)
     ### Tenemos una lista valida, procedemos a descargar los archivos
     print('Descargando lista de archivos:')

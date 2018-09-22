@@ -1,16 +1,14 @@
 import os
 
-def populate():
-
-    print('Populating Database...')
-    print('----------------------\n')
-
+def superuser_setup(User):
     #Superuser config
     username = 'agus'
     email = 'agusc@agusc.com.ar'
     password = 'Ferraro'
-    create_super_user(username, email, password)
 
+    u = User.objects.create_superuser(username, email, password)
+
+def mercadopago_setup(MPAccount):
     #Mercadopago config
     acc = MPAccount()
     acc.name = "Creame3DMP"
@@ -27,6 +25,7 @@ def populate():
     acc.save()
     print("Mecadopago added")
 
+def social_accounts_config(Site,SocialApp):
     #Social accounts config
     ##Site onfig
     Site.objects.all()[0].delete()
@@ -51,6 +50,7 @@ def populate():
     o.save()
     print("Social accounts created")
 
+def thingiverse_apikeys_setup(ApiKey):
     #ApiKeys (Thingiverse) population
     ***REMOVED***
     ***REMOVED***
@@ -58,6 +58,7 @@ def populate():
     ***REMOVED***
     print("API Keys (Thingiverse) added")
 
+def colors_setup(Color):
     print("Initiating colors population...")
     #Color population
     color_list = [('Blanco','FFFFFF'),('Verde oscuro','013100'),('Verde claro','12B50C'),('Celeste','0A73B8'),('Amarillo','FFF208'),('Azul','0954F5'),('Naranja','FF8400'),('Rojo','793A00'),('Gris','606060'),('Negro','000000')]
@@ -81,6 +82,7 @@ def populate():
         os.remove(sfb_path)
     print("Colors added")
 
+def testing_objects_setup():
     #Object population (for testing)
     valid_input = False
     while not valid_input:
@@ -97,14 +99,6 @@ def populate():
     print("Objects added")
 
     print("Migration finished successfully")
-
-def create_super_user(username, email, password):
-    try:
-        u = User.objects.create_superuser(username, email, password)
-        return u
-    except IntegrityError:
-        pass
-
 
 
 if __name__ == '__main__':
@@ -123,4 +117,11 @@ if __name__ == '__main__':
     from django.core.files import File
     from db.tools.import_from_thingi import *
     import os, subprocess
-    populate()
+    print('Populating Database...')
+    print('----------------------\n')
+    superuser_setup(User)
+    mercadopago_setup(MPAccount)
+    social_accounts_config(Site,SocialApp)
+    thingiverse_apikeys_setup(ApiKey)
+    colors_setup(Color)
+    testing_objects_setup()
