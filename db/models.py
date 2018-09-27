@@ -143,14 +143,15 @@ class Objeto(models.Model):
     #Colores del objeto
     default_color = models.ForeignKey(Color,on_delete=models.SET_NULL,null=True,blank=True,related_name='default_color')
     popular_color = models.ForeignKey(Color,on_delete=models.SET_NULL,null=True,blank=True,related_name='popular_color')
+    #Origen del objeto (AKA como fue agregado)
 
     def suggested_color(self):
         if self.default_color != None:
-            return self.default_color.code
+            return self.default_color
         elif self.popular_color != None:
-            return self.popular_color.code
+            return self.popular_color
         else:
-            return Color.objects.first().code
+            return Color.objects.first()
 
     def update_popular_color(self):
         colors_ordered = [a.color.id for a in ObjetoPersonalizado.objects.filter(object_id=self)]

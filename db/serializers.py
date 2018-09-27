@@ -26,6 +26,11 @@ class ModeloArSerializer(serializers.ModelSerializer):
         model = ModeloAR
         fields = ('combined_stl','human_flag','sfb_file','sfb_file_rotated','combined_dimensions','rotated')
 
+class ColorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Color
+        fields = ('id','name','code','available','sfb_color_reference')
+
 class ObjetoSerializer(serializers.ModelSerializer):
     #images = serializers.StringRelatedField(many=True)
     #images = serializers.SlugRelatedField(many=True, read_only=True,slug_field='name')
@@ -49,6 +54,8 @@ class ObjetoSerializer(serializers.ModelSerializer):
     files = ArchivoSTLSerializer(many=True)
     images = ImagenSerializer(many=True)
     ar_model = ModeloArSerializer(source='modeloar')
+    suggested_color = ColorSerializer()
+
     class Meta:
         depth = 4
         model = Objeto
@@ -71,11 +78,6 @@ class CategoriaSerializer(serializers.ModelSerializer):
 Definimos el serializador de Compra con un poco mas de cuidado, para poder serializar
 en forma nesteada una compra; simplificando la creacion de estas.
 '''
-
-class ColorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Color
-        fields = ('id','name','code','available','sfb_color_reference')
 
 class ObjetoPersonalizadoSerializer(serializers.ModelSerializer):
     #olor = serializers.PrimaryKeyRelatedField(read_only=True)
