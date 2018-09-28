@@ -6,7 +6,15 @@ Secret Key:***REMOVED***
 api.creame3d.com
 App ID:***REMOVED***
 Secret Key:***REMOVED***
+api.creame3d.com-v2
+{"id":357724365,"nickname":"TETE4845577","password":"qatest6257","site_status":"active","email":"test_user_55384080@testuser.com"}
+ID: 6591554033016558 | Secret key: I8PYPLOeZKIOroUzXznn7vfUIdpKkaW5
+    Public key: APP_USR-cec57ea4-10ff-4b85-878b-eb94d2f84bff
+    Access token: APP_USR-6591554033016558-092523-5dfd7170ca533e5a45eaa9795222d132-357724365
 
 Comprador:
 {"id":352079709,"nickname":"TT434297","password":"qatest3485","site_status":"active","email":"test_user_4752238@testuser.com"}
 Visa-SBX: 4509953566233704
+
+v2
+{"id":357728086,"nickname":"TESTXOISGLXW","password":"qatest9204","site_status":"active","email":"test_user_88801944@testuser.com"}

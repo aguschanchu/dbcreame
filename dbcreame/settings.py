@@ -26,7 +26,7 @@ SECRET_KEY = '***REMOVED***'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1','192.168.1.2','agusc.ovh']
+ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1','192.168.1.2','agusc.ovh','192.168.100.104']
 
 # Application definition
 
@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'imagekit',
     #Mercadochorros
     'django_mercadopago',
+    #Celery
+    'django_celery_results',
     #Aplicaciones propias
     'db',
 ]
@@ -184,6 +186,11 @@ MERCADOPAGO = {
     'base_host': CURRENT_PROTOCOL + '://' + CURRENT_HOST
 }
 
+#Celery config
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/1'
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_TASK_TRACK_STARTED = True
+CELERYD_TASK_SOFT_TIME_LIMIT = 600
 
 #Configuraciones adicionales
 SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'
