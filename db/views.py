@@ -1,11 +1,12 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer, ThingiverseAPIKeyRequestSerializer
+from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer, ThingiverseAPIKeyRequestSerializer, ImagenVisionAPISerializer
 from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado, SfbRotationTracker, Usuario
 from rest_framework import generics, status, pagination, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from django.http import Http404
-from .tools import import_from_thingi, price_calculator
+from thingiverse import import_from_thingi
+from db.tools import price_calculator
 import json
 import traceback
 from django_mercadopago import models as MPModels
@@ -259,7 +260,7 @@ class AddObjectFromThingiverse(APIView):
             obj = serializer.save()
             #Ejecutamos la importacion
             try:
-                job = import_from_thingi.add_object_from_thingiverse(obj.external_id,obj.file_list)
+                job = import_from_thingi.add_object_from_thingiverse(obj.external_id,obj.file_list,partial=False)
                 obj.status = 'finished'
             except:
                 traceback.print_exc()
@@ -273,17 +274,6 @@ class SendAppSetupInformation(APIView):
         serializer = AppSetupInformationSerializer(price_calculator.obtener_parametros_de_precios())
         return Response(serializer.data)
 
-class ThingiverseAPIKeyRequestView(APIView):
-    permission_classes = (IsAdminUser,)
-
-    def post(self, request, format=None):
-        serializer = ThingiverseAPIKeyRequestSerializer(data=request.data)
-        if serializer.is_valid():
-            if not 'uses' in serializer.validated_data.keys():
-                serializer.validated_data['uses'] = 1
-            serializer.validated_data['api_key'] = import_from_thingi.get_api_key(serializer.validated_data['uses'])
-            return Response(serializer.data)
-        return Response(serializer.errors)
 
 '''
 Social login views
@@ -325,3 +315,15 @@ class MercadopagoSuccessUrl(generics.RetrieveAPIView):
         except MPModels.Notification.DoesNotExist:
              raise Http404
         return preference
+
+'''
+VisionAPI Views
+'''
+
+class VisionAPIPostURL(generics.CreateAPIView):
+    serializer_class = ImagenVisionAPISerializer
+
+    def post(self, request, *args, **kwargs):
+        print(request.stream)
+        print(request.data)
+        return self.create(request, *args, **kwargs)

@@ -3,7 +3,7 @@ from django.utils.safestring import mark_safe
 from django.utils import timezone
 from django.core.files import File
 from django.core.files.base import ContentFile
-from .tools import import_from_thingi
+from thingiverse import import_from_thingi
 from .tools import stl_to_sfb
 from .tools import dbdispatcher
 from .render.blender import render_image
@@ -122,6 +122,10 @@ class ReferenciaExterna(models.Model):
     def __str__(self):
         return self.repository+':'+self.external_id
 
+origenes = (
+    ('human', 'Agregado por un humano'),
+    ('visionapi', 'Resultado de busqueda en visionapi'),
+)
 
 class Objeto(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -144,6 +148,9 @@ class Objeto(models.Model):
     default_color = models.ForeignKey(Color,on_delete=models.SET_NULL,null=True,blank=True,related_name='default_color')
     popular_color = models.ForeignKey(Color,on_delete=models.SET_NULL,null=True,blank=True,related_name='popular_color')
     #Origen del objeto (AKA como fue agregado)
+    origin = models.CharField(choices=origenes,max_length=30,null=True)
+    #Fueron descargados los STL? (y objetos relacionados con este)
+    partial = models.BooleanField(default=False)
 
     def suggested_color(self):
         if self.default_color != None:
@@ -407,6 +414,13 @@ class SfbRotationTracker(models.Model):
 def update_rotated_sfb(sender, instance, created, **kwargs):
     if created:
         instance.object.modeloar.calculate_rotated()
+'''
+Modelos de reconocimiento de imagenes
+'''
+
+class ImagenVisionAPI(models.Model):
+    image = models.ImageField(upload_to='images/visionapi/')
+    celery_id = models.CharField(max_length=100,blank=True,null=True)
 
 '''
 Modelos externos

@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     #Aplicaciones propias
     'db',
+    'thingiverse',
 ]
 
 MIDDLEWARE = [
@@ -195,6 +196,11 @@ CELERYD_TASK_SOFT_TIME_LIMIT = 600
 #Configuraciones adicionales
 SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'
 THINGIVERSE_API_ENDPOINT = 'https://api.thingiverse.com/'
+DB_ADMIN_USERNAME = 'agus'
+DB_ADMIN_PASSWORD = 'Ferraro'
+
+#Configuracion de APIs de Google (Translate y Vision)
+GOOGLE_APPLICATION_CREDENTIALS = "google_credentials.json"
 
 #Configuraciones de precios
 PRECIO_POR_HORA_DE_IMPRESION = 40

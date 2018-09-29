@@ -112,10 +112,10 @@ if __name__ == '__main__':
     from django.db import IntegrityError
     from allauth.socialaccount.models import Site, SocialApp
     from django_mercadopago.models import Account as MPAccount
-    from db.tools.import_from_thingi import *
+    from thingiverse.models import *
     from db.models import *
     from django.core.files import File
-    from db.tools.import_from_thingi import *
+    from thingiverse.import_from_thingi import *
     import os, subprocess
     print('Populating Database...')
     print('----------------------\n')

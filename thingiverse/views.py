@@ -1,0 +1,19 @@
+from thingiverse.models import ApiKey
+from thingiverse.serializers import ThingiverseAPIKeyRequestSerializer
+from rest_framework import generics, status, pagination, serializers
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
+
+
+class ThingiverseAPIKeyRequestView(APIView):
+    #permission_classes = (IsAdminUser,)
+
+    def post(self, request, format=None):
+        serializer = ThingiverseAPIKeyRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            if not 'uses' in serializer.validated_data.keys():
+                serializer.validated_data['uses'] = 1
+            serializer.validated_data['api_key'] = ApiKey.get_api_key(serializer.validated_data['uses'])
+            return Response(serializer.data)
+        return Response(serializer.errors)

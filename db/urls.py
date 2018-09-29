@@ -40,7 +40,6 @@ path('orders/preference/<str:mpid>/',views.GetPreferenceInfoFromMP.as_view()),
 #External tools
 urlpatterns += [
 path('tools/add_object_from_thingiverse/',views.AddObjectFromThingiverse.as_view(), name='import_from_thingi_url'),
-path('tools/get_thingiverse_api_key/',views.ThingiverseAPIKeyRequestView.as_view()),
 path('information/setup/',views.SendAppSetupInformation.as_view()),
 ]
 #Auth
@@ -53,4 +52,8 @@ url(r'^accounts/google/login/callback/$', views.GoogleLogin.as_view(), name='goo
 #Mercadopago
 urlpatterns += [
 path('mp/<str:pk>/', views.MercadopagoSuccessUrl.as_view(),name='success_url'),
+]
+#VisionAPI
+urlpatterns += [
+path('vision/', views.VisionAPIPostURL.as_view()),
 ]

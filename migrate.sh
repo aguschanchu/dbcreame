@@ -2,6 +2,8 @@ rm -r db/migrations media tmp
 mkdir media tmp
 mkdir media/images media/renders media/sfb media/stl
 mkdir media/images/plots
+mkdir media/images/visionapi
+
 chmod 777 -R media tmp
 #PSQL DB preparation
 sudo -u postgres -H -- psql -c "DROP DATABASE dbapi"
