@@ -43,3 +43,14 @@ class ApiKey(models.Model):
                 return key.key
             else:
                 return None
+
+class ObjetoThingi(models.Model):
+    estados = (
+        ('processing', 'Procesando'),
+        ('error', 'Error'),
+        ('finished', 'Finalizado'),
+    )
+    external_id = models.IntegerField()
+    #Lista de archivos thing a tener en cuenta. Puede ser 'all', o una lista en formato json
+    file_list = models.CharField(max_length=300,blank=True,null=True)
+    status = models.CharField(choices=estados,max_length=300,blank=True,default="processing")

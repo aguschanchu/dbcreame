@@ -15,4 +15,7 @@ sudo -u postgres -H -- psql -c "ALTER ROLE dbapi SET default_transaction_isolati
 sudo -u postgres -H -- psql -c "ALTER ROLE dbapi SET timezone TO 'UTC'"
 sudo -u postgres -H -- psql -c "GRANT ALL PRIVILEGES ON DATABASE dbapi TO dbapi"
 #DB population
-python manage.py makemigrations db && python manage.py migrate && python populate.py
+python manage.py makemigrations db
+python manage.py makemigrations thingiverse
+python manage.py migrate
+python populate.py

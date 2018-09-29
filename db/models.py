@@ -421,18 +421,3 @@ Modelos de reconocimiento de imagenes
 class ImagenVisionAPI(models.Model):
     image = models.ImageField(upload_to='images/visionapi/')
     celery_id = models.CharField(max_length=100,blank=True,null=True)
-
-'''
-Modelos externos
-'''
-
-class ObjetoThingi(models.Model):
-    estados = (
-        ('processing', 'Procesando'),
-        ('error', 'Error'),
-        ('finished', 'Finalizado'),
-    )
-    external_id = models.IntegerField()
-    #Lista de archivos thing a tener en cuenta. Puede ser 'all', o una lista en formato json
-    file_list = models.CharField(max_length=300,blank=True,null=True)
-    status = models.CharField(choices=estados,max_length=300,blank=True,default="processing")

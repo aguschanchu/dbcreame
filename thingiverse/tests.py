@@ -1,6 +1,6 @@
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
 from db.models import *
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -12,7 +12,10 @@ from thingiverse.models import *
 from django.core.files import File
 import os, subprocess
 
-class ObjetoTest(APITestCase):
+
+class ObjetoTest(APITransactionTestCase):
+    allow_database_queries = True
+
     def setUp(self):
         from populate import thingiverse_apikeys_setup, superuser_setup
         superuser_setup(User)
@@ -20,12 +23,11 @@ class ObjetoTest(APITestCase):
 
     def test_import_from_thingi(self):
         self.assertTrue(ApiKey.objects.count() > 0)
-        print(ApiKey.objects.count())
-        url = reverse('db:import_from_thingi_url')
+        url = reverse('thingiverse:import_from_thingi_url')
         #Esta vista requiere estar logueado con admin
         user = User.objects.first()
         self.client.force_authenticate(user=user)
-        data = {'external_id': '763622', 'file_list' : '["1223854"]'}
+        data = {'external_id': '763622', 'file_list' : [1223854]}
         cuenta_de_objetos = Objeto.objects.count()
         #Enviamos la request
         response = self.client.post(url, data, format='json')

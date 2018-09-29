@@ -1,4 +1,4 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer, ThingiverseAPIKeyRequestSerializer, ImagenVisionAPISerializer
+from db.serializers import ObjetoSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer, ImagenVisionAPISerializer
 from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado, SfbRotationTracker, Usuario
 from rest_framework import generics, status, pagination, serializers
 from rest_framework.views import APIView
@@ -251,23 +251,7 @@ class UserInformationView(generics.RetrieveUpdateAPIView):
 DB Operations view
 '''
 
-class AddObjectFromThingiverse(APIView):
-    permission_classes = (IsAdminUser,)
-    #Agregar objeto desde id y lista de archivos
-    def post(self, request, format=None):
-        serializer = ObjetoThingiSerializer(data=request.data)
-        if serializer.is_valid():
-            obj = serializer.save()
-            #Ejecutamos la importacion
-            try:
-                job = import_from_thingi.add_object_from_thingiverse(obj.external_id,obj.file_list,partial=False)
-                obj.status = 'finished'
-            except:
-                traceback.print_exc()
-                obj.status = 'error'
-            obj.save()
-            return Response(ObjetoThingiSerializer(obj).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors)
+
 
 class SendAppSetupInformation(APIView):
     def get(self, request, format=None):

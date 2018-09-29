@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 import datetime
-from .models import Objeto, ObjetoThingi, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio, ImagenVisionAPI
+from .models import Objeto, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio, ImagenVisionAPI
 from django.contrib.auth.models import User, AnonymousUser
 from django_mercadopago import models as MPModels
 from django.db.utils import IntegrityError
@@ -136,10 +136,6 @@ class CompraSerializer(serializers.ModelSerializer):
 Serializadores accesorios
 '''
 
-class ObjetoThingiSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ObjetoThingi
-        fields = ('id', 'external_id', 'status', 'file_list')
 
 class SfbRotationTrackerSerializer(serializers.ModelSerializer):
     class Meta:
