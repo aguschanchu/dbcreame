@@ -194,6 +194,7 @@ CELERY_RESULT_BACKEND = 'django-db'
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_TASK_TRACK_STARTED = True
 CELERYD_TASK_SOFT_TIME_LIMIT = 600
+CHORD_UNLOCK_MAX_RETRIES = 60
 
 #Configuraciones adicionales
 SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'

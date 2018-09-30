@@ -1,4 +1,4 @@
-from thingiverse.models import ApiKey
+from thingiverse.models import ApiKey, ObjetoThingi
 from thingiverse.serializers import ThingiverseAPIKeyRequestSerializer, ObjetoThingiSerializer
 from thingiverse import import_from_thingi
 from rest_framework import generics, status, pagination, serializers
@@ -23,3 +23,16 @@ class ThingiverseAPIKeyRequestView(APIView):
 class AddObjectFromThingiverse(generics.CreateAPIView):
     #permission_classes = (IsAdminUser,)
     serializer_class = ObjetoThingiSerializer
+
+class AddObjectFromThingiverseStatus(generics.RetrieveAPIView):
+    serializer_class = ObjetoThingiSerializer
+    lookup_url_kwarg = 'pk'
+
+    def get_object(self):
+        pk = self.kwargs.get(self.lookup_url_kwarg)
+        try:
+            objeto = ObjetoThingi.objects.get(id=pk)
+            objeto.update_status()
+        except ObjetoThingi.DoesNotExist:
+             raise Http404
+        return objeto

@@ -190,6 +190,7 @@ class Objeto(models.Model):
     def printing_time_default_total(self):
         return round(sum([sum(a.time_as_a_function_of_scale.coefficients_list()) for a in self.files.all()]))
 
+
 '''
 Modelos accesorios
 '''

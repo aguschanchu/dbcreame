@@ -4,6 +4,8 @@ from django_celery_results.models import TaskResult
 from db import models as modelos
 from . import tasks
 import datetime
+import json
+import traceback
 
 '''
 Tenemos un limite de 300/5', queremos monitorear cada key, para no pasarnos
@@ -54,18 +56,19 @@ class ObjetoThingiManager(models.Manager):
         # Ejecutamos la tarea
         job = tasks.add_object_from_thingiverse_chain(thingiid=external_id, file_list=file_list, partial=partial, origin=origin).apply_async()
         object.celery_id = job.id
-        object.save()
+        object.save(update_fields=["celery_id"])
         return object
 
 class ObjetoThingi(models.Model):
     estados = (
-        ('processing', 'Procesando'),
-        ('error', 'Error'),
-        ('finished', 'Finalizado'),
+        ('QUEUED', 'En cola'),
+        ('STARTED', 'Procesando'),
+        ('FAILURE', 'Error'),
+        ('SUCCESS', 'Finalizado'),
     )
     external_id = models.IntegerField()
     #Lista de archivos thing a tener en cuenta. Puede ser nulo (y por lo tanto, descarga todos) o una lista
-    file_list = ArrayField(models.CharField(max_length=30, blank=True),null=True)
+    file_list = ArrayField(models.IntegerField(),null=True)
     status = models.CharField(choices=estados,max_length=300,blank=True,default="processing")
     celery_id = models.CharField(max_length=100,blank=True)
     object_id = models.ForeignKey('db.Objeto',null=True,on_delete=models.SET_NULL)
@@ -73,13 +76,23 @@ class ObjetoThingi(models.Model):
 
     objects = ObjetoThingiManager()
     def update_status(self):
-        res = TaskResult.objects.filter(task_id=celery_id)
+        res = TaskResult.objects.filter(task_id=self.celery_id)
         if res.count() == 0:
-            self.status = 'processing'
+            self.status = 'QUEUED'
         else:
-            try:
-                self.object_id = modelos.Objeto.objects.get(pk=res[0])
-                self.status = 'finished'
-            except:
-                self.status = 'error'
+            job = res[0]
+            if job.status == 'SUCCESS':
+                try:
+                    result = json.loads(job.result)
+                    self.object_id = modelos.Objeto.objects.get(pk=result[0])
+                    # Tiene imagen principal?
+                    if not self.object_id.main_image:
+                        self.status = 'STARTED'
+                    else:
+                        self.status = 'SUCCESS'
+                except:
+                    traceback.print_exc()
+                    self.status = 'ERROR'
+            else:
+                self.status = job.status
         self.save()

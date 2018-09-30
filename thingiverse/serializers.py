@@ -12,4 +12,5 @@ class ObjetoThingiSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         #Ejecutamos la tarea de celery
+        print(validated_data)
         return ObjetoThingi.objects.create_object(**validated_data)

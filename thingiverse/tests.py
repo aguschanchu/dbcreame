@@ -10,6 +10,7 @@ from django_mercadopago.models import Account as MPAccount
 from thingiverse.import_from_thingi import *
 from thingiverse.models import *
 from django.core.files import File
+import time
 import os, subprocess
 
 
@@ -31,5 +32,18 @@ class ObjetoTest(APITransactionTestCase):
         cuenta_de_objetos = Objeto.objects.count()
         #Enviamos la request
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        #Recibimos el id, y esperamos a que se termine de agregar a la db
+        id = response.json()['id']
+        #Se termino de agregar?
+        url = reverse('thingiverse:import_from_thingi_url_status', kwargs={'pk':id})
+        print(url)
+        for _ in range(0,600):
+            response = self.client.get(url).json()['status']
+            if response == "SUCCESS":
+                break
+            time.sleep(0.1)
         self.assertEqual(Objeto.objects.count(), cuenta_de_objetos+1)
+
+    def add_objects_to_partial_thing(self):
+        objeto = Objeto.objects.all()[0]
+        

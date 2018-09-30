@@ -19,15 +19,6 @@ urllib3.disable_warnings()
 from google.cloud import translate
 from .tasks import request_from_thingi, get_thing_categories_list, download_file
 
-def slicer_results_sanity_check(res_file,res_poly):
-    #El polinomio fue correctamente ajustado?
-    if len(json.loads(res_poly['escalas'])) < 6:
-        return False
-    #El archivo es muy pequeño?
-    if res_file['size_x']*res_file['size_y']*res_file['size_z'] < 5**3:
-        return False
-    return True
-
 def add_objects(max_things,start_page=0):
     #Funcion para popular la base de datos
     thing_counter = 0

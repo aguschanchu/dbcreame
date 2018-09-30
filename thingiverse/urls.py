@@ -8,5 +8,5 @@ app_name = 'thingiverse'
 urlpatterns = [
 path('get_api_key/',views.ThingiverseAPIKeyRequestView.as_view()),
 path('add_object/',views.AddObjectFromThingiverse.as_view(), name='import_from_thingi_url'),
-
+path('add_object/status/<int:pk>/',views.AddObjectFromThingiverseStatus.as_view(),name='import_from_thingi_url_status')
 ]
