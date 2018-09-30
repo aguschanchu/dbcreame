@@ -1,4 +1,4 @@
-rm -r db/migrations media tmp
+rm -r db/migrations thingiverse/migrations media tmp
 mkdir media tmp
 mkdir media/images media/renders media/sfb media/stl
 mkdir media/images/plots

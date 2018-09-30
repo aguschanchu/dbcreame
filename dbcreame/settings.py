@@ -145,6 +145,8 @@ USE_TZ = True
 
 ADMIN_SITE_HEADER = "NoName DB Administration"
 
+SITE_ID = 4
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
@@ -188,7 +190,7 @@ MERCADOPAGO = {
 }
 
 #Celery config
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/1'
+CELERY_RESULT_BACKEND = 'django-db'
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_TASK_TRACK_STARTED = True
 CELERYD_TASK_SOFT_TIME_LIMIT = 600

@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 import traceback
+from .tasks import add_object_from_thingiverse_chain
 
 class ThingiverseAPIKeyRequestView(APIView):
     permission_classes = (IsAdminUser,)
@@ -19,20 +20,6 @@ class ThingiverseAPIKeyRequestView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors)
 
-class AddObjectFromThingiverse(APIView):
-    permission_classes = (IsAdminUser,)
-    #Agregar objeto desde id y lista de archivos
-    def post(self, request, format=None):
-        serializer = ObjetoThingiSerializer(data=request.data)
-        if serializer.is_valid():
-            obj = serializer.save()
-            #Ejecutamos la importacion
-            try:
-                job = import_from_thingi.add_object_from_thingiverse(obj.external_id,file_list=serializer.validated_data['file_list'],partial=False)
-                obj.status = 'finished'
-            except:
-                traceback.print_exc()
-                obj.status = 'error'
-            obj.save()
-            return Response(ObjetoThingiSerializer(obj).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors)
+class AddObjectFromThingiverse(generics.CreateAPIView):
+    #permission_classes = (IsAdminUser,)
+    serializer_class = ObjetoThingiSerializer

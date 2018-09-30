@@ -3,7 +3,7 @@ from django.utils.safestring import mark_safe
 from django.utils import timezone
 from django.core.files import File
 from django.core.files.base import ContentFile
-from thingiverse import import_from_thingi
+from thingiverse.tasks import translate_category, translate_tag
 from .tools import stl_to_sfb
 from .tools import dbdispatcher
 from .render.blender import render_image
@@ -13,7 +13,6 @@ import datetime
 import os
 import shutil
 import trimesh
-from multiprocessing import Pool
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -57,6 +56,12 @@ class Categoria(models.Model):
             self.name_es = translation['translatedText']
             self.save()
 
+@receiver(post_save, sender=Categoria)
+def translate_category_signal(sender, instance, created, **kwargs):
+    if created:
+        translate_category.delay(instance.id)
+
+
 class Tag(models.Model):
     name = models.CharField(max_length=300,unique=True)
     name_es = models.CharField(max_length=300,blank=True,null=True)
@@ -71,6 +76,11 @@ class Tag(models.Model):
             translation = translate_client.translate(self.name,source_language='en',target_language='es')
             self.name_es = translation['translatedText']
             self.save()
+
+@receiver(post_save, sender=Tag)
+def translate_tag_signal(sender, instance, created, **kwargs):
+    if created:
+        translate_tag.delay(instance.id)
 
 class Polinomio(models.Model):
     #Polinomio en forma p(x) = \sum^0_{n=0} a_n x^n
@@ -133,7 +143,7 @@ class Objeto(models.Model):
     name_es = models.CharField(max_length=300,null=True,blank=True)
     description = models.TextField(blank=True,null=True)
     like_count = models.IntegerField(blank=True,default=0)
-    main_image = models.ImageField(upload_to='images/')
+    main_image = models.ImageField(upload_to='images/',null=True)
     main_image_thumbnail = ImageSpecField(source='main_image', processors=[ResizeToFit(width=800, height=600, upscale=False)], format='JPEG', options={'quality': 40})
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
     creation_date = models.DateTimeField(default=timezone.now)
@@ -174,7 +184,7 @@ class Objeto(models.Model):
                 translate_client = translate.Client()
             translation = translate_client.translate(self.name,source_language='en',target_language='es')
             self.name_es = translation['translatedText']
-            self.save()
+            self.save(update_fields=['name_es'])
 
     #En lugar de sumar default_printing_time, evaluamos tiempo(escala) en 1. Esto, es para evitar difierencias al usar el polinomio
     def printing_time_default_total(self):
@@ -263,17 +273,14 @@ class ModeloAR(models.Model):
         shutil.rmtree(res)
 
     def combine_stl(self):
-        with Pool(processes=1) as pool:
-            res = pool.apply_async(stl_to_sfb.combine_stl_with_correct_coordinates,[self])
-            name = self.combined_stl.name
-            new_file = res.get()
-            #Borramos el archivo anterior
-            #self.combined_stl.delete()
-            self.combined_stl.save(name,new_file,save=False)
-            #Ejecutamos la funcion de guardar a parte, para que evitar un loop infinito con los signals
-            self.save(update_fields=['combined_stl','human_flag'])
-            #Actualizamos el tamaño del objeto
-            self.calculate_combined_dimensions()
+        new_file = stl_to_sfb.combine_stl_with_correct_coordinates(self)
+        #Borramos el archivo anterior
+        #self.combined_stl.delete()
+        self.combined_stl.save(name,new_file,save=False)
+        #Ejecutamos la funcion de guardar a parte, para que evitar un loop infinito con los signals
+        self.save(update_fields=['combined_stl','human_flag'])
+        #Actualizamos el tamaño del objeto
+        self.calculate_combined_dimensions()
 
     def create_sfb(self,generate=False):
         if not self.combined_stl.name:
@@ -285,9 +292,7 @@ class ModeloAR(models.Model):
                 return False
         #Creamos ambos SFB
         for field, fieldname, rotate in [(self.sfb_file,'sfb_file',False),(self.sfb_file_rotated,'sfb_file_rotated',True)]:
-            with Pool(processes=1) as pool:
-                res = pool.apply_async(stl_to_sfb.convert,(settings.BASE_DIR+self.combined_stl.url,self.combined_stl.name,rotate))
-                sfb_path = res.get(timeout=30)
+            sfb_path = stl_to_sfb.convert(settings.BASE_DIR+self.combined_stl.url,self.combined_stl.name,rotate)
             with open(sfb_path,'rb') as f:
                 field.save(sfb_path.split('/')[-1],File(f),save=False)
                 self.save(update_fields=[fieldname])

@@ -27,7 +27,7 @@ class ObjetoTest(APITransactionTestCase):
         #Esta vista requiere estar logueado con admin
         user = User.objects.first()
         self.client.force_authenticate(user=user)
-        data = {'external_id': '763622', 'file_list' : [1223854]}
+        data = {'external_id': '763622', 'file_list' : [1223854],'partial': True}
         cuenta_de_objetos = Objeto.objects.count()
         #Enviamos la request
         response = self.client.post(url, data, format='json')

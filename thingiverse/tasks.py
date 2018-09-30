@@ -1,5 +1,5 @@
 from __future__ import absolute_import, unicode_literals
-from celery import shared_task
+from celery import shared_task, chord, group
 from .models import ApiKey
 from db import models as modelos
 from django.db import models
@@ -7,6 +7,7 @@ from thingiverse.models import *
 import datetime
 import os
 import requests
+import random, string
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.core.files import File
@@ -73,22 +74,52 @@ def download_file(url):
     return path
 
 @shared_task
-def add_object_from_thingiverse(thingiid,file_list = None, override = False, debug = True, partial = False):
-    if debug:
-        t = time.time()
+def translate_tag(tag_id):
+    modelos.Tag.objects.get(pk=tag_id).translate_es()
+
+@shared_task
+def translate_category(cat_id):
+    modelos.Categoria.objects.get(pk=cat_id).translate_es()
+
+@shared_task
+def translate_name(object_id):
+    modelos.Objeto.objects.get(pk=object_id).translate_es()
+
+
+'''
+A continuacion definimos un conjunto de tareas, que se ejecutaran en cadena para crear la thing
+El esquema de ejecucion es el siguiente:
+1) Descarga de informacion
+2) Creacion de objeto
+3) Descarga de Imagenes
+4) Descarga de archivos y sliceo (de no ser una importacion parcial)
+'''
+
+def add_object_from_thingiverse_chain(thingiid, file_list = None, debug = True, partial = False, origin = None):
+    #Descarga de informacion
+    res = group([
+    request_from_thingi.s('things/{}'.format(thingiid)),
+    request_from_thingi.s('things/{}/tags'.format(thingiid)),
+    get_thing_categories_list.s(thingiid),
+    request_from_thingi.s('things/{}/images'.format(thingiid)),
+    ])
+    #Creacion de objeto a partir de informacion descargada
+    res |= add_object.s(thingiid, partial, debug, origin)
+    res |= download_images_task_group.s(partial)
+    if not partial:
+        res |= add_files_to_thingiverse_object.s(file_list)
+    return res
+
+@shared_task
+def add_object(thingiverse_requests, thingiid, partial, debug, origin):
     print("Iniciando descarga de "+str(thingiid))
     #Preparamos y enviamos todas las requests que necesitamos
     r = {}
-    r['main'] = request_from_thingi.delay('things/{}'.format(thingiid))
-    r['tags'] = request_from_thingi.delay('things/{}/tags'.format(thingiid))
-    r['categories'] = get_thing_categories_list.delay(thingiid)
-    r['img'] = request_from_thingi.delay('things/{}/images'.format(thingiid))
-    #Esperamos a que hayan finalizado las necesarias
-    for key in r.keys():
-        r[key] = r[key].get()
-    if debug:
-        print("Tiempo de requests: {}".format(time.time()-t))
-        t = time.time()
+    r['main'] = thingiverse_requests[0]
+    r['tags'] = thingiverse_requests[1]
+    r['categories'] = thingiverse_requests[2]
+    r['img'] = thingiverse_requests[3]
+    print(r)
     #Existe la thing?
     if "Not Found" in r['main'].values():
         raise ValueError("Thingiid invalida")
@@ -119,54 +150,6 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     for tag in r['tags']:
         tags.append(modelos.Tag.objects.get_or_create(name=tag['name'])[0])
 
-    if debug:
-        print("Tiempo de creacion de objetos {}".format(time.time()-t))
-        t = time.time()
-    ## Traduccion de tags y categorias
-    if not partial:
-        translate_client = translate.Client()
-        ### Tags
-        if len(tags) > 0:
-            translation = translate_client.translate([tag.name for tag in tags],source_language='en',target_language='es')
-            for i in range(0,len(translation)):
-                tags[i].name_es = translation[i]['translatedText']
-                tags[i].save()
-        ### Categorias
-        if len(categorias) > 0:
-            translation = translate_client.translate([categoria.name for categoria in categorias],source_language='en',target_language='es')
-            for i in range(0,len(translation)):
-                categorias[i].name_es = translation[i]['translatedText']
-                categorias[i].save()
-
-    if debug and not partial:
-        print("Tiempo de traduccion de objetos {}".format(time.time()-t))
-        t = time.time()
-
-    ## Imagenes
-    print("Descargando imagenes")
-    ### Solicitando tareas
-    main_image_url = r['img'][0]['sizes'][12]['url']
-    images = [(urlparse(main_image_url).path.split('/')[-1],download_file.delay(main_image_url))]
-    for j in range(1,len(r['img'])):
-        url = r['img'][j]['sizes'][12]['url']
-        images.append((urlparse(url).path.split('/')[-1],download_file.delay(url)))
-    #### Esperamos a la finalizacion de tareas
-    images = [(img[0],img[1].get()) for img in images]
-
-    ###Imagenes adicionales
-    imagenes = []
-    #### Ahora, el resto de imagenes
-    for j in range(0,len(images)):
-        imagen = modelos.Imagen()
-        with open(images[j][1],'rb') as file:
-            image_file = File(file)
-            imagen.photo.save(images[j][0],image_file)
-        imagenes.append(imagen)
-
-    if debug:
-        print("Tiempo de descarga de imagenes {}".format(time.time()-t))
-        t = time.time()
-
     ## Creacion de Objeto
     objeto = modelos.Objeto()
 
@@ -175,15 +158,9 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     objeto.name = r['main']['name']
     objeto.description = r['main']['description']
     objeto.external_id = referencia_externa
-
-    ###Imagen principal
-    main_image_name = images[0][1]
-    try:
-        with open(images[0][1],'rb') as file:
-            main_image = File(file)
-            objeto.main_image.save(main_image_name,main_image)
-    except:
-        raise ValueError("Error al descargar imagen principal")
+    objeto.origin = origin
+    objeto.partial = partial
+    objeto.save()
 
     ### Asigamos categorias y tags
     for categoria in categorias:
@@ -191,29 +168,48 @@ def add_object_from_thingiverse(thingiid,file_list = None, override = False, deb
     for tag in tags:
         objeto.tags.add(tag)
 
-    objeto.save()
+    return (objeto.id, [j['sizes'][12]['url'] for j in r['img']])
 
-    #Traducimos el nombre
-    if not partial:
-        objeto.translate_es()
-
-    #Linkeamos los ForeignKey antes creados al objeto creado
-    for imagen in imagenes:
-        imagen.object = objeto
-        imagen.save()
-
-    #Limpiamos las imagenes
-    for img in images:
-        os.remove(img[1])
-
-    #Es un archivo parcial? O continuamos trabajando?
-    if not partial:
-        add_files_to_thingiverse_object(objeto,file_list = file_list)
+@shared_task
+def download_images_task_group(it,partial):
+    # Map a callback over an iterator and return as a group
+    res = [translate_name.s(it[0])]
+    res.append(download_main_image.s(it[0],it[1][0]))
+    for i in it[1]:
+        res.append(download_additional_image.s(it[0],i))
+    g = group(res).apply_async()
+    if partial:
+        return (it[0],g.id)
     else:
-        objeto.partial = True
-        objeto.save()
+        return (it[0],0)
 
-def add_files_to_thingiverse_object(objeto, file_list = None, override = False, debug = True):
+@shared_task
+def download_main_image(objeto_id, url):
+    objeto = modelos.Objeto.objects.get(pk=objeto_id)
+    path = download_file(url)
+    with open(path,'rb') as file:
+            image_file = File(file)
+            objeto.main_image.save(urlparse(url).path.split('/')[-1],image_file)
+    objeto.save(update_fields=['main_image'])
+    os.remove(path)
+    return True
+
+@shared_task
+def download_additional_image(objeto_id, url):
+    objeto = modelos.Objeto.objects.get(pk=objeto_id)
+    imagen = modelos.Imagen()
+    path = download_file(url)
+    with open(path,'rb') as file:
+            image_file = File(file)
+            imagen.photo.save(urlparse(url).path.split('/')[-1],image_file)
+            os.remove(path)
+    imagen.object = objeto
+    imagen.save()
+
+
+@shared_task
+def add_files_to_thingiverse_object(object_id, file_list = None, override = False, debug = True):
+        objeto = modelos.Objeto.objects.get(pk=object_id[0])
         http = PoolManager(retries=Retry(total=5, status_forcelist=[500]))
         #Recuperamos el id del objeto
         if objeto.external_id != None:
@@ -234,7 +230,7 @@ def add_files_to_thingiverse_object(objeto, file_list = None, override = False, 
         for id in file_list:
             if id not in files_available_id:
                 print("IDs disponibles:")
-                print(files_available_id)
+                print(files_availtiempoable_id)
                 raise ValueError("IDs de archivos invalida: "+id)
         ### Tenemos una lista valida, procedemos a descargar los archivos
         print('Descargando lista de archivos:')
@@ -250,7 +246,7 @@ def add_files_to_thingiverse_object(objeto, file_list = None, override = False, 
         #Con los archivos solicitados, se los solicitamos a celery y agregamos a DB
         archivos = []
         for link in archivos_link:
-            link = (link[0],link[1].get())
+            link = (link[0],link[1].get(disable_sync_subtasks=False))
             with open(link[1],'rb') as file:
                 archivo = modelos.ArchivoSTL()
                 archivo.file.save(objeto.external_id.repository+'-'+str(objeto.external_id.external_id)+'.stl',File(file))
@@ -347,11 +343,12 @@ def add_files_to_thingiverse_object(objeto, file_list = None, override = False, 
         #Preparamos el modelo AR
         modelo_ar.create_sfb(generate=True)
 
-        objeto.save()
-
         #Es posible que el objeto no tenga ningun archivo, en cuyo caso, lo borramos
         if len(archivos) == 0:
             objeto.delete()
+            return False
+        else:
+            return (objeto.id, True)
 
 def slicer_results_sanity_check(res_file,res_poly):
     #El polinomio fue correctamente ajustado?
