@@ -21,13 +21,18 @@ class ObjetoTest(APITransactionTestCase):
         from populate import thingiverse_apikeys_setup, superuser_setup
         superuser_setup(User)
         thingiverse_apikeys_setup(ApiKey)
-
-    def test_import_from_thingi(self):
+        #Fueron importadas correctamente las API Keys?
         self.assertTrue(ApiKey.objects.count() > 0)
-        url = reverse('thingiverse:import_from_thingi_url')
-        #Esta vista requiere estar logueado con admin
+        #Logueamos con el usuario admin
         user = User.objects.first()
         self.client.force_authenticate(user=user)
+        #Preparamos las urls
+
+
+    #Importacion parcial de objeto de Thingiverse
+    def test_import_from_thingi_partial(self):
+        t = time.time()
+        url = reverse('thingiverse:import_from_thingi_url')
         data = {'external_id': '763622', 'file_list' : [1223854],'partial': True}
         cuenta_de_objetos = Objeto.objects.count()
         #Enviamos la request
@@ -43,7 +48,25 @@ class ObjetoTest(APITransactionTestCase):
                 break
             time.sleep(0.1)
         self.assertEqual(Objeto.objects.count(), cuenta_de_objetos+1)
+        print("Tiempo de importacion parcial de objeto: {}s".format(time.time()-t))
 
-    def add_objects_to_partial_thing(self):
+    def test_add_objects_to_partial_thing(self):
+        t = time.time()
+        self.test_import_from_thingi_partial()
         objeto = Objeto.objects.all()[0]
-        
+        #Deberia ser un objeto parcial, importado en el test anterior
+        self.assertEqual(objeto.partial, True)
+        cantidad_inicial_de_archivos = len(objeto.files.all())
+        #Mismo codigo que antes
+        url = reverse('thingiverse:import_from_thingi_url')
+        data = {'object_id': objeto.id, 'file_list' : [1223854], 'update_object': True}
+        response = self.client.post(url, data, format='json')
+        id = response.json()['id']
+        url = reverse('thingiverse:import_from_thingi_url_status', kwargs={'pk':id})
+        for _ in range(0,6000):
+            response = self.client.get(url).json()['status']
+            if response == "SUCCESS":
+                break
+            time.sleep(0.1)
+        self.assertEqual(len(objeto.files.all()), cantidad_inicial_de_archivos+1)
+        print("Tiempo de importacion total de objeto: {}s".format(time.time()-t))

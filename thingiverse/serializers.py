@@ -11,6 +11,8 @@ class ObjetoThingiSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def create(self, validated_data):
-        #Ejecutamos la tarea de celery
-        print(validated_data)
-        return ObjetoThingi.objects.create_object(**validated_data)
+        #Hay que crear el modelo?
+        if validated_data.get('update_object'):
+                return ObjetoThingi.objects.update_object(**validated_data)
+        else:
+            return ObjetoThingi.objects.create_object(**validated_data)

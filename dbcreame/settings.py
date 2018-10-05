@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'imagekit',
     #Mercadochorros
     'django_mercadopago',
+    #Testeo lindo
+    'django_nose',
     #Celery
     'django_celery_results',
     #Aplicaciones propias
@@ -71,6 +73,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'dbcreame.urls'
+
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 TEMPLATES = [
     {
@@ -145,7 +149,7 @@ USE_TZ = True
 
 ADMIN_SITE_HEADER = "NoName DB Administration"
 
-SITE_ID = 4
+SITE_ID = 6
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

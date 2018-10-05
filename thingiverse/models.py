@@ -51,12 +51,19 @@ class ApiKey(models.Model):
                 return None
 
 class ObjetoThingiManager(models.Manager):
-    def create_object(self, external_id, file_list=None, partial=False, origin=None):
+    def create_object(self, external_id, file_list=None, partial=False, origin=None, update_object=False):
         object = self.create(external_id=external_id, file_list=file_list, partial=partial)
         # Ejecutamos la tarea
         job = tasks.add_object_from_thingiverse_chain(thingiid=external_id, file_list=file_list, partial=partial, origin=origin).apply_async()
         object.celery_id = job.id
         object.save(update_fields=["celery_id"])
+        return object
+
+    def update_object(self, object_id, file_list=None, update_object=True, partial=False):
+        object = self.create(object_id=object_id,external_id=object_id.external_id.external_id, file_list=file_list, partial=partial, update_object=update_object)
+        job = tasks.add_files_to_thingiverse_object.delay([object_id.id], file_list)
+        object.celery_id = job.id
+        object.save(update_fields=['celery_id','external_id'])
         return object
 
 class ObjetoThingi(models.Model):
@@ -65,14 +72,16 @@ class ObjetoThingi(models.Model):
         ('STARTED', 'Procesando'),
         ('FAILURE', 'Error'),
         ('SUCCESS', 'Finalizado'),
+        ('NOT FOUND', 'Objeto no hallado'),
     )
-    external_id = models.IntegerField()
+    external_id = models.IntegerField(default=0)
     #Lista de archivos thing a tener en cuenta. Puede ser nulo (y por lo tanto, descarga todos) o una lista
     file_list = ArrayField(models.IntegerField(),null=True)
     status = models.CharField(choices=estados,max_length=300,blank=True,default="processing")
     celery_id = models.CharField(max_length=100,blank=True)
     object_id = models.ForeignKey('db.Objeto',null=True,on_delete=models.SET_NULL)
     partial = models.BooleanField(default=True)
+    update_object = models.BooleanField(default=False)
 
     objects = ObjetoThingiManager()
     def update_status(self):

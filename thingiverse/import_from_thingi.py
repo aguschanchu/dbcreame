@@ -18,6 +18,7 @@ import pickle
 urllib3.disable_warnings()
 from google.cloud import translate
 from .tasks import request_from_thingi, get_thing_categories_list, download_file
+from thingiverse.models import ObjetoThingi
 
 def add_objects(max_things,start_page=0):
     #Funcion para popular la base de datos
@@ -28,7 +29,7 @@ def add_objects(max_things,start_page=0):
         r = request_from_thingi('/popular',False,'&page={}'.format(page_counter))
         for item in r:
             try:
-                add_object_from_thingiverse(item['id'])
+                ObjetoThingi.objects.create_object(external_id=item['id'])
                 thing_counter += 1
             except:
                 traceback.print_exc()
@@ -36,14 +37,15 @@ def add_objects(max_things,start_page=0):
                 print('Error al agregar objeto: {}'.format(item['id']))
         print('Contador: {}'.format(thing_counter))
 
-def import_from_thingiverse_parser(base):
+def import_from_thingiverse_parser():
     '''
     A partir de un BufferedReader de un archivo de pickle, importa las things
     '''
-    base = pickle.load(base)
+    with open('things_ids_complete.db','rb') as file:
+        base = pickle.load(file)
     for thing in base:
         try:
-            add_object_from_thingiverse(thing['thing_id'],file_list = thing['thing_files_id'])
+            ObjetoThingi.objects.create_object(external_id=thing['thing_id'],file_list = thing['thing_files_id'], origin='human')
         except:
             traceback.print_exc()
             time.sleep(2)

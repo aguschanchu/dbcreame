@@ -376,6 +376,7 @@ class Compra(models.Model):
         ('accepted', 'Aceptado'),
         ('printing', 'Imprimiendo'),
         ('shipped', 'Enviado'),
+        ('completed', 'Completado'),
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,blank=True)
     buyer = models.ForeignKey(Usuario,on_delete=models.CASCADE,blank=True,null=True)

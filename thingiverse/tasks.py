@@ -343,6 +343,10 @@ def add_files_to_thingiverse_object(object_id, file_list = None, override = Fals
         #Preparamos el modelo AR
         modelo_ar.create_sfb(generate=True)
 
+        #Le quitamos el flag de importacion parcial
+        objeto.partial = False
+        objeto.save(update_fields=['partial'])
+
         #Es posible que el objeto no tenga ningun archivo, en cuyo caso, lo borramos
         if len(archivos) == 0:
             objeto.delete()
