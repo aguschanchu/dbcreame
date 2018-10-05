@@ -51,7 +51,7 @@ class ApiKey(models.Model):
                 return None
 
 class ObjetoThingiManager(models.Manager):
-    def create_object(self, external_id, file_list=None, partial=False, origin=None, update_object=False):
+    def create_object(self, external_id, file_list=None, partial=False, origin=None, update_object=False, subtask_ids_list = None):
         object = self.create(external_id=external_id, file_list=file_list, partial=partial)
         # Ejecutamos la tarea
         job = tasks.add_object_from_thingiverse_chain(thingiid=external_id, file_list=file_list, partial=partial, origin=origin).apply_async()
@@ -59,7 +59,7 @@ class ObjetoThingiManager(models.Manager):
         object.save(update_fields=["celery_id"])
         return object
 
-    def update_object(self, object_id, file_list=None, update_object=True, partial=False):
+    def update_object(self, object_id, file_list=None, update_object=True, partial=False, subtask_ids_list = None):
         object = self.create(object_id=object_id,external_id=object_id.external_id.external_id, file_list=file_list, partial=partial, update_object=update_object)
         job = tasks.add_files_to_thingiverse_object.delay([object_id.id], file_list)
         object.celery_id = job.id
@@ -84,6 +84,7 @@ class ObjetoThingi(models.Model):
     update_object = models.BooleanField(default=False)
 
     objects = ObjetoThingiManager()
+
     def update_status(self):
         res = TaskResult.objects.filter(task_id=self.celery_id)
         if res.count() == 0:
@@ -105,3 +106,21 @@ class ObjetoThingi(models.Model):
             else:
                 self.status = job.status
         self.save()
+
+    def update_subtask_status(self):
+        for t in self.subtasks.all():
+            if t.update_status() == False:
+                return False
+        else:
+            return [t.update_status() for t in self.subtasks.all()]
+
+class ObjetoThingiSubtask(models.Model):
+    parent_task = models.ForeignKey(ObjetoThingi,on_delete=models.SET_NULL,null=True,related_name='subtasks')
+    celery_id = models.CharField(max_length=100,null=True)
+
+    def update_status(self):
+        res = TaskResult.objects.filter(task_id=self.celery_id)
+        if res.count() == 0:
+            return False
+        else:
+            return json.loads(res[0].result)

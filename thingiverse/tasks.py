@@ -110,8 +110,8 @@ def add_object_from_thingiverse_chain(thingiid, file_list = None, debug = True, 
         res |= add_files_to_thingiverse_object.s(file_list)
     return res
 
-@shared_task
-def add_object(thingiverse_requests, thingiid, partial, debug, origin):
+@shared_task(bind=True)
+def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
     print("Iniciando descarga de "+str(thingiid))
     #Preparamos y enviamos todas las requests que necesitamos
     r = {}
@@ -119,7 +119,6 @@ def add_object(thingiverse_requests, thingiid, partial, debug, origin):
     r['tags'] = thingiverse_requests[1]
     r['categories'] = thingiverse_requests[2]
     r['img'] = thingiverse_requests[3]
-    print(r)
     #Existe la thing?
     if "Not Found" in r['main'].values():
         raise ValueError("Thingiid invalida")
@@ -207,9 +206,10 @@ def download_additional_image(objeto_id, url):
     imagen.save()
 
 
-@shared_task
-def add_files_to_thingiverse_object(object_id, file_list = None, override = False, debug = True):
+@shared_task(bind=True)
+def add_files_to_thingiverse_object(self, object_id, file_list = None, override = False, debug = True):
         objeto = modelos.Objeto.objects.get(pk=object_id[0])
+        task = ObjetoThingi.objects.filter(celery_id=self.request.id)[0]
         http = PoolManager(retries=Retry(total=5, status_forcelist=[500]))
         #Recuperamos el id del objeto
         if objeto.external_id != None:
@@ -222,36 +222,49 @@ def add_files_to_thingiverse_object(object_id, file_list = None, override = Fals
         print("Preparando archivos")
         rfiles = request_from_thingi('things/{}/files'.format(thingiid))
         files_available_id = [a['id'] for a in rfiles]
-        if file_list == None:
+        if len(file_list) == 0:
             file_list = files_available_id
-        elif type(file_list) == list:
-            pass
         ### Nos pasaron una lista de archivos valida?
         for id in file_list:
             if id not in files_available_id:
                 print("IDs disponibles:")
                 print(files_availtiempoable_id)
                 raise ValueError("IDs de archivos invalida: "+id)
+        '''
+        Hay que descargar todos los archivos antes de continuar. Hay 3 escenarios posibles
+        1) No inicio la descarga -> la inicio, y guardo el id del grupo de trabajo de descargas
+        2) La descarga ya fue iniciada, pero, aun no termino algun archivo -> reintento la tarea
+        3) La descarga ya finalizo -> Continuo con la cotizacion
+        '''
         ### Tenemos una lista valida, procedemos a descargar los archivos
-        print('Descargando lista de archivos:')
-        print(file_list)
-        archivos_link = []
-        for id in file_list:
-            for thing_file in rfiles:
-                if id == thing_file['id']:
-                    name = thing_file['name']
-                    if '.stl' in name.lower():
-                        download_url = thing_file['download_url']
-                        archivos_link.append((urlparse(download_url).path.split('/')[-1],download_file.delay(download_url+'?access_token='+ApiKey.get_api_key())))
-        #Con los archivos solicitados, se los solicitamos a celery y agregamos a DB
+        if task.subtasks.count() == 0:
+            print('Descargando lista de archivos:')
+            print(file_list)
+            archivos_link = []
+            for id in file_list:
+                for thing_file in rfiles:
+                    if id == thing_file['id']:
+                        name = thing_file['name']
+                        if '.stl' in name.lower():
+                            download_url = thing_file['download_url']
+                            st = download_file.delay(download_url+'?access_token='+ApiKey.get_api_key())
+                            ObjetoThingiSubtask.objects.create(parent_task=task,celery_id=st.id)
+                            raise self.retry(countdown=5)
+                            return False
+
+        ### Termino el grupo de trabajo?
+        if task.update_subtask_status() == False:
+            raise self.retry(countdown=5)
+            return False
+        ### Ok, termino. Agregamos los archivos al objeto, y continuamos
+        archivos_link = task.update_subtask_status()
         archivos = []
         for link in archivos_link:
-            link = (link[0],link[1].get(disable_sync_subtasks=False))
-            with open(link[1],'rb') as file:
+            with open(link,'rb') as file:
                 archivo = modelos.ArchivoSTL()
                 archivo.file.save(objeto.external_id.repository+'-'+str(objeto.external_id.external_id)+'.stl',File(file))
                 archivos.append(archivo)
-                os.remove(link[1])
+                os.remove(link)
         ### Tenemos los archivos descargados. Necesitamos completar su tiempo de imp, peso, dimensiones
         print("Ejecutando trabajos de sliceo")
         slicer_jobs_ids = {}
