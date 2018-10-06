@@ -80,7 +80,6 @@ en forma nesteada una compra; simplificando la creacion de estas.
 '''
 
 class ObjetoPersonalizadoSerializer(serializers.ModelSerializer):
-    color = ColorSerializer()
     class Meta:
         model = ObjetoPersonalizado
         fields = ('name','object_id','color','scale','quantity')
