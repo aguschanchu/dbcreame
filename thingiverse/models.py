@@ -11,14 +11,10 @@ import traceback
 Tenemos un limite de 300/5', queremos monitorear cada key, para no pasarnos
 '''
 
-class QueryEvent(models.Model):
-    date = models.DateTimeField(auto_now_add=True)
-
 class ApiKey(models.Model):
     quota = 290
     quota_interval = 5*60
     key = models.CharField(max_length=100)
-    meter = models.ManyToManyField(QueryEvent)
 
     def clean(self):
         #¿Es valida?
@@ -27,8 +23,7 @@ class ApiKey(models.Model):
             raise ValidationError('API key invalida')
 
     def make_query(self):
-        event = QueryEvent.objects.create()
-        self.meter.add(event)
+        event = QueryEvent.objects.create(key=self)
 
     def available(self, count=1):
         #Actualizamos la tabla de meters:
@@ -47,8 +42,12 @@ class ApiKey(models.Model):
                 for _ in range(0,count):
                     key.make_query()
                 return key.key
-            else:
-                return None
+        else:
+            return None
+
+class QueryEvent(models.Model):
+    date = models.DateTimeField(auto_now_add=True)
+    key = models.ForeignKey(ApiKey, on_delete=models.CASCADE, related_name='meter')
 
 class ObjetoThingiManager(models.Manager):
     def create_object(self, external_id, file_list=None, partial=False, origin=None, update_object=False, subtask_ids_list = None):

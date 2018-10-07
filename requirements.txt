@@ -16,3 +16,4 @@ matplotlib
 Pillow
 django-imagekit
 google-cloud-vision
+django_nose
