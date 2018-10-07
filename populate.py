@@ -29,7 +29,7 @@ def social_accounts_config(Site,SocialApp):
     #Social accounts config
     ##Site onfig
     Site.objects.all()[0].delete()
-    site = Site.objects.get_or_create(domain=settings.CURRENT_HOST,name=settings.CURRENT_HOST)[0]
+    site = Site.objects.get_or_create(domain=settings.CURRENT_HOST,name=settings.CURRENT_HOST,id=1)[0]
     ##Google Config
     o = SocialApp()
     o.provider = "google"

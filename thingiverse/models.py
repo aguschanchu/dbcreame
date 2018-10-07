@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
-from django_celery_results.models import TaskResult
+from celery.result import AsyncResult
 from db import models as modelos
 from . import tasks
 import datetime
@@ -53,7 +53,7 @@ class ObjetoThingiManager(models.Manager):
     def create_object(self, external_id, file_list=None, partial=False, origin=None, update_object=False, subtask_ids_list = None):
         object = self.create(external_id=external_id, file_list=file_list, partial=partial)
         # Ejecutamos la tarea
-        job = tasks.add_object_from_thingiverse_chain(thingiid=external_id, file_list=file_list, partial=partial, origin=origin).apply_async()
+        job = tasks.add_object_from_thingiverse_chain(thingiid=external_id, file_list=file_list, partial=partial, origin=origin).apply_async(max_retries=300)
         object.celery_id = job.id
         object.save(update_fields=["celery_id"])
         return object
@@ -71,6 +71,7 @@ class ObjetoThingi(models.Model):
         ('STARTED', 'Procesando'),
         ('FAILURE', 'Error'),
         ('SUCCESS', 'Finalizado'),
+        ('RETRY', 'Esperando a ser reintentado'),
         ('NOT FOUND', 'Objeto no hallado'),
     )
     external_id = models.IntegerField(default=0)
@@ -85,25 +86,16 @@ class ObjetoThingi(models.Model):
     objects = ObjetoThingiManager()
 
     def update_status(self):
-        res = TaskResult.objects.filter(task_id=self.celery_id)
-        if res.count() == 0:
-            self.status = 'QUEUED'
-        else:
-            job = res[0]
-            if job.status == 'SUCCESS':
-                try:
-                    result = json.loads(job.result)
-                    self.object_id = modelos.Objeto.objects.get(pk=result[0])
-                    # Tiene imagen principal?
-                    if not self.object_id.main_image:
-                        self.status = 'STARTED'
-                    else:
-                        self.status = 'SUCCESS'
-                except:
-                    traceback.print_exc()
-                    self.status = 'ERROR'
+        res = AsyncResult(self.celery_id)
+        self.status = res.state
+        if res.ready():
+            result = res.result
+            self.object_id = modelos.Objeto.objects.get(pk=result[0])
+            # Tiene imagen principal?
+            if not self.object_id.main_image:
+                self.status = 'STARTED'
             else:
-                self.status = job.status
+                self.status = 'SUCCESS'
         self.save()
 
     def update_subtask_status(self):
@@ -113,13 +105,20 @@ class ObjetoThingi(models.Model):
         else:
             return [t.update_status() for t in self.subtasks.all()]
 
+    def remove_subtask_by_result(self, res):
+        for t in self.subtasks.all():
+            if t.update_status() == res:
+                t.delete()
+
+
 class ObjetoThingiSubtask(models.Model):
     parent_task = models.ForeignKey(ObjetoThingi,on_delete=models.SET_NULL,null=True,related_name='subtasks')
     celery_id = models.CharField(max_length=100,null=True)
 
     def update_status(self):
-        res = TaskResult.objects.filter(task_id=self.celery_id)
-        if res.count() == 0:
-            return False
+        res = AsyncResult(self.celery_id)
+        if res.ready():
+            result = res.result
+            return result
         else:
-            return json.loads(res[0].result)
+            return False

@@ -23,8 +23,8 @@ def render_image(armodel):
     #Corremos Blender
     args = [settings.BASE_DIR+'/lib/blender/blender','--python',script_dir,'--background']
     try:
-        proc = subprocess.run(args,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE,timeout=60)
-    except TimeoutExpired:
+        proc = subprocess.run(args,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE,timeout=60*5)
+    except subprocess.TimeoutExpired:
         raise Exception("Timeout al renderizar imagen")
     else:
         traceback.print_exc()

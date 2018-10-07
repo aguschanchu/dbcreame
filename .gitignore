@@ -1,6 +1,7 @@
 migrations
 *.pyc
 *.stl
+*.log
 media
 tmp
 server-dev.ini

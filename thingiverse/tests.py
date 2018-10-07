@@ -59,7 +59,7 @@ class ObjetoTest(APITransactionTestCase):
         cantidad_inicial_de_archivos = len(objeto.files.all())
         #Mismo codigo que antes
         url = reverse('thingiverse:import_from_thingi_url')
-        data = {'object_id': objeto.id, 'file_list' : [1223854], 'update_object': True}
+        data = {'object_id': objeto.id, 'file_list' : [1223854,1475623], 'update_object': True}
         response = self.client.post(url, data, format='json')
         id = response.json()['id']
         url = reverse('thingiverse:import_from_thingi_url_status', kwargs={'pk':id})
@@ -68,5 +68,5 @@ class ObjetoTest(APITransactionTestCase):
             if response == "SUCCESS":
                 break
             time.sleep(0.1)
-        self.assertEqual(len(objeto.files.all()), cantidad_inicial_de_archivos+1)
+        self.assertEqual(len(objeto.files.all()), cantidad_inicial_de_archivos+2)
         print("Tiempo de importacion total de objeto: {}s".format(time.time()-t))
