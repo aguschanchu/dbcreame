@@ -24,6 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     url(r'^db/', include('db.urls')),
     url(r'^thingiverse/', include('thingiverse.urls')),
+    url(r'^vision/', include('vision.urls')),
 ]
 
 #Mercadopago

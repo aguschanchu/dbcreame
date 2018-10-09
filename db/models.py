@@ -190,6 +190,16 @@ class Objeto(models.Model):
     def printing_time_default_total(self):
         return round(sum([sum(a.time_as_a_function_of_scale.coefficients_list()) for a in self.files.all()]))
 
+    @staticmethod
+    def search_objects(query):
+        objetos_n = Objeto.objects.none()
+        objetos_t = Objeto.objects.none()
+        for word in query:
+            objetos_n = objetos_n | Objeto.objects.filter(name__contains=word) | Objeto.objects.filter(name_es__contains=word)
+        for word in query:
+            objetos_t = objetos_t | Objeto.objects.filter(tags__name_es=word) | Objeto.objects.filter(tags__name=word)
+
+        return (objetos_t | objetos_n).distinct()
 
 '''
 Modelos accesorios
@@ -421,10 +431,3 @@ class SfbRotationTracker(models.Model):
 def update_rotated_sfb(sender, instance, created, **kwargs):
     if created:
         instance.object.modeloar.calculate_rotated()
-'''
-Modelos de reconocimiento de imagenes
-'''
-
-class ImagenVisionAPI(models.Model):
-    image = models.ImageField(upload_to='images/visionapi/')
-    celery_id = models.CharField(max_length=100,blank=True,null=True)

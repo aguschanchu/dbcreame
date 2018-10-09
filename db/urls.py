@@ -52,7 +52,3 @@ url(r'^accounts/google/login/callback/$', views.GoogleLogin.as_view(), name='goo
 urlpatterns += [
 path('mp/<str:pk>/', views.MercadopagoSuccessUrl.as_view(),name='success_url'),
 ]
-#VisionAPI
-urlpatterns += [
-path('vision/', views.VisionAPIPostURL.as_view()),
-]

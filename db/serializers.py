@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 import datetime
-from .models import Objeto, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio, ImagenVisionAPI
+from .models import Objeto, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio
 from django.contrib.auth.models import User, AnonymousUser
 from django_mercadopago import models as MPModels
 from django.db.utils import IntegrityError
@@ -177,12 +177,3 @@ class AppSetupInformationSerializer(serializers.Serializer):
     price_per_hour = serializers.FloatField(read_only=True)
     discount_parameter_a = serializers.FloatField(read_only=True)
     discount_parameter_b = serializers.FloatField(read_only=True)
-
-'''
-Serializadores de VisionAPI
-'''
-
-class ImagenVisionAPISerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ImagenVisionAPI
-        fields = '__all__'

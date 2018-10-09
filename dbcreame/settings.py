@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     #Aplicaciones propias
     'db',
     'thingiverse',
+    'vision',
 ]
 
 MIDDLEWARE = [
@@ -208,6 +209,9 @@ DB_ADMIN_PASSWORD = 'Ferraro'
 
 #Configuracion de APIs de Google (Translate y Vision)
 GOOGLE_APPLICATION_CREDENTIALS = "google_credentials.json"
+
+#Configuracion de Vision
+VISION_RESULTS_AMOUNT = 10
 
 #Configuraciones de precios
 PRECIO_POR_HORA_DE_IMPRESION = 40

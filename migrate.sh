@@ -1,4 +1,4 @@
-rm -r db/migrations thingiverse/migrations media tmp
+rm -r db/migrations thingiverse/migrations vision/migrations media tmp
 mkdir media tmp
 mkdir media/images media/renders media/sfb media/stl
 mkdir media/images/plots
@@ -17,5 +17,6 @@ sudo -u postgres -H -- psql -c "GRANT ALL PRIVILEGES ON DATABASE dbapi TO dbapi"
 #DB population
 python manage.py makemigrations db
 python manage.py makemigrations thingiverse
+python manage.py makemigrations vision
 python manage.py migrate
 python populate.py

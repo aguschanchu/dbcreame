@@ -1,4 +1,4 @@
-from db.serializers import ObjetoSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer, ImagenVisionAPISerializer
+from db.serializers import ObjetoSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer
 from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado, SfbRotationTracker, Usuario
 from rest_framework import generics, status, pagination, serializers
 from rest_framework.views import APIView
@@ -86,14 +86,7 @@ class SearchView(generics.ListAPIView):
 
     def get_queryset(self):
         query = self.kwargs.get(self.lookup_url_kwarg).split(' ')
-        objetos_n = Objeto.objects.none()
-        objetos_t = Objeto.objects.none()
-        for word in query:
-            objetos_n = objetos_n | Objeto.objects.filter(name__contains=word) | Objeto.objects.filter(name_es__contains=word)
-        for word in query:
-            objetos_t = objetos_t | Objeto.objects.filter(tags__name_es=word) | Objeto.objects.filter(tags__name=word)
-
-        return (objetos_t | objetos_n).distinct()
+        return Objeto.search_objects(query)
 
 
 '''
@@ -299,15 +292,3 @@ class MercadopagoSuccessUrl(generics.RetrieveAPIView):
         except MPModels.Notification.DoesNotExist:
              raise Http404
         return preference
-
-'''
-VisionAPI Views
-'''
-
-class VisionAPIPostURL(generics.CreateAPIView):
-    serializer_class = ImagenVisionAPISerializer
-
-    def post(self, request, *args, **kwargs):
-        print(request.stream)
-        print(request.data)
-        return self.create(request, *args, **kwargs)

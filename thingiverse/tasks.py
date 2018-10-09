@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.core.files import File
 import time
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 import traceback
 from django.conf import settings
 import json
@@ -29,12 +29,12 @@ from celery.exceptions import SoftTimeLimitExceeded
 @shared_task(autoretry_for=(TypeError,ValueError,MaxRetryError), retry_backoff=True, max_retries=50)
 def request_from_thingi(url,content=False,params=''):
     endpoint = settings.THINGIVERSE_API_ENDPOINT
-    http = PoolManager(retries=Retry(total=2, backoff_factor=0.1, status_forcelist=list(range(400,501))))
+    http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(400,501))))
     for _ in range(0,60):
         k = ApiKey.get_api_key()
         if k != None:
             if not content:
-                r = json.loads(http.request('GET',endpoint+url+'?access_token='+k+params).data.decode('utf-8'))
+                r = json.loads(http.request('GET',endpoint+quote(url)+'?access_token='+k+params).data.decode('utf-8'))
             else:
                 r = http.request('GET',endpoint+url+'?access_token='+k+params).data
             return r
