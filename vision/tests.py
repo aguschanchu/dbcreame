@@ -60,4 +60,3 @@ class ObjetoTest(APITransactionTestCase):
                 break
             time.sleep(0.1)
         self.assertTrue(len(objeto.files.all())>cantidad_inicial_de_archivos)
-        print("Tiempo de importacion total de objeto: {}s".format(time.time()-t))
