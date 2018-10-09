@@ -60,4 +60,11 @@ from db.models import *
 import pickle
 with open('things_ids_complete.db','rb') as base:
     import_from_thingiverse_parser(base)
+
+from db.models import *
+for o in Objeto.objects.all():
+    if len(o.files.all()) == 0:
+        ref_ext = o.external_id
+        o.delete()
+        ref_ext.delete()
 '''

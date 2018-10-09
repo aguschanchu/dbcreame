@@ -38,11 +38,11 @@ def process_image(self,id):
     '''
     tag_list = [a.description for a in response.label_annotations]
     local_search_results = Objeto.search_objects(tag_list)
+    for o in local_search_results:
+        objeto.search_results.add(o)
     #Basta con los resultados locales? Devolvemos eso
-    if len(local_search_results) > settings.VISION_RESULTS_AMOUNT:
-        for o in local_search_results:
-            objeto.search_results.add(o)
-            return True
+    if len(objeto.search_results.all()) > settings.VISION_RESULTS_AMOUNT:
+        return True
     #No basta? Buscamos en Thingiverse las distintas tags
     things_ids_a_agregar = set()
     things_restantes = lambda: settings.VISION_RESULTS_AMOUNT - len(objeto.search_results.all()) - len(things_ids_a_agregar)
