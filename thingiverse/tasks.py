@@ -231,7 +231,7 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
         print("Preparando archivos")
         rfiles = request_from_thingi('things/{}/files'.format(thingiid))
         files_available_id = [a['id'] for a in rfiles]
-        if len(file_list) == 0:
+        if file_list == None:
             file_list = files_available_id
         ### Nos pasaron una lista de archivos valida?
         for id in file_list:

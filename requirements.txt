@@ -17,3 +17,4 @@ Pillow
 django-imagekit
 google-cloud-vision
 django_nose
+google-cloud-vision

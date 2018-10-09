@@ -3,18 +3,14 @@ from . import tasks
 from celery.result import AsyncResult
 import uuid
 
-class SearchResult(models.model):
-    tag = models.CharField(max_length=100)
-    score = models.FloatField(default=0)
-    parent = models.ForeignKey(ImagenVisionAPI)
-
 class ImagenVisionAPIManager(models.Manager):
-    def create_object(self,image,celery_id=None,status=None,search_results=None,subtasks=None):
+    def create_object(self,image,celery_id=None,status=None,search_results=None,subtasks=None,tag_search_result=None):
         object = self.create(image=image)
         # Ejecutamos la tarea
         job = tasks.process_image.delay(object.id)
         object.celery_id = job.id
-        object.save(update_fields=["celery_id"])
+        object.status = 'QUEUED'
+        object.save(update_fields=["celery_id","status"])
         return object
 
 class ImagenVisionAPI(models.Model):
@@ -43,3 +39,8 @@ class ImagenVisionAPI(models.Model):
         else:
             self.status = 'SUCCESS'
             self.save(update_fields=['status'])
+
+class TagSearchResult(models.Model):
+    tag = models.CharField(max_length=100)
+    score = models.FloatField(default=0)
+    parent = models.ForeignKey(ImagenVisionAPI,related_name='tag_search_result',on_delete=models.CASCADE)

@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from celery import shared_task, chord, group
 import io
-import os
 from vision import models as modelos
 from google.cloud import vision as gvision
 from google.cloud.vision import types
@@ -19,7 +18,6 @@ A partir de una imagen, ejecuta las tareas de importacion para los resultados de
 def process_image(self,id):
     objeto = modelos.ImagenVisionAPI.objects.get(pk=id)
     client = gvision.ImageAnnotatorClient()
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = 'google_credentials.json'
     image_path = settings.BASE_DIR + objeto.image.url
 
     #Ejecutamos el reconocimiento de tags
@@ -27,7 +25,9 @@ def process_image(self,id):
         content = image_file.read()
     image = types.Image(content=content)
     response = client.label_detection(image=image)
-
+    #Guardamos resultados de busqueda
+    for tag in response.label_annotations:
+        modelos.TagSearchResult.objects.create(tag=tag.description,score=tag.score,parent=objeto)
     '''
     response.label_annotations tiene una lista de labels, donde cada uno, tiene un nombre
     y puntaje [0,1]. La idea, es:
@@ -60,7 +60,7 @@ def process_image(self,id):
                 things_ids_a_agregar.add(id)
     #Con la lista de cosas a agregar, ejecutamos la importacion.
     for id in things_ids_a_agregar:
-        o = ObjetoThingi.objects.create_object(external_id=id,partial=True)
+        o = ObjetoThingi.objects.create_object(external_id=id,partial=True,origin='vision')
         objeto.subtasks.add(o)
     return True
 

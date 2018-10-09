@@ -134,7 +134,7 @@ class ReferenciaExterna(models.Model):
 
 origenes = (
     ('human', 'Agregado por un humano'),
-    ('visionapi', 'Resultado de busqueda en visionapi'),
+    ('vision', 'Resultado de busqueda en visionapi'),
 )
 
 class Objeto(models.Model):

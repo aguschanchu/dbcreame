@@ -17,6 +17,17 @@ class VisionAPIPostURL(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
+class VisionAPIStatusURL(generics.RetrieveAPIView):
+    serializer_class = ImagenVisionAPISerializer
+    lookup_url_kwarg = 'id'
+
+    def get_object(self):
+        id = self.kwargs.get(self.lookup_url_kwarg)
+        #Buscamos la tarea por id
+        job = ImagenVisionAPI.objects.get(pk=id)
+        job.update_status()
+        return job
+
 class VisionAPIViewURL(generics.ListAPIView):
     serializer_class = ObjetoSerializer
     pagination_class = ObjectPagination

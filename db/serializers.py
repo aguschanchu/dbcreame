@@ -61,7 +61,7 @@ class ObjetoSerializer(serializers.ModelSerializer):
         model = Objeto
         fields = ('id', 'name', 'name_es', 'description', 'like_count', 'main_image', 'main_image_thumbnail', 'images',
          'files', 'author', 'creation_date', 'category', 'tags', 'external_id', 'liked',
-         'hidden','ar_model','printing_time_default_total','suggested_color','discount')
+         'hidden','ar_model','printing_time_default_total','suggested_color','discount','partial','origin')
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
