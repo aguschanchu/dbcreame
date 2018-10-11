@@ -164,7 +164,7 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
     objeto.description = r['main']['description']
     objeto.external_id = referencia_externa
     objeto.origin = origin
-    objeto.partial = partial
+    objeto.partial = True
     objeto.save()
 
     ### Asigamos categorias y tags
@@ -227,6 +227,9 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
             thingiid = objeto.external_id.external_id
         else:
             raise ValueError("El objeto no tiene referencia externa")
+        #Es un objeto parcial? De no ser asi, no hay nada que hacer
+        if not objeto.partial:
+            return (objeto.id, True)
         ## Archvos STL
         print("Preparando archivos")
         rfiles = request_from_thingi('things/{}/files'.format(thingiid))
