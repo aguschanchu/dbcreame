@@ -65,6 +65,15 @@ def thingiverse_apikeys_setup(ApiKey):
 
     print("API Keys (Thingiverse) added")
 
+def populate_categories():
+    #Categorias base en Thingiverse. No deberian cambiar
+    base_categories = request_from_thingi('categories')
+    for bcat in base_categories:
+        category_info = request_from_thingi(bcat['url'])
+        parent = CategoriaThigi.objects.create(name=category_info['name'])
+        for child in category_info['children']:
+            CategoriaThigi.objects.create(name=child['name'],parent=parent)
+
 def colors_setup(Color):
     print("Initiating colors population...")
     #Color population
@@ -120,6 +129,7 @@ if __name__ == '__main__':
     from allauth.socialaccount.models import Site, SocialApp
     from django_mercadopago.models import Account as MPAccount
     from thingiverse.models import *
+    from thingiverse.tasks import request_from_thingi
     from db.models import *
     from django.core.files import File
     from thingiverse.import_from_thingi import *

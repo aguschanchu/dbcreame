@@ -122,3 +122,18 @@ class ObjetoThingiSubtask(models.Model):
             return result
         else:
             return False
+
+'''
+Thingiverse tiene una estructura de subcategorias, en donde en algunos casos hay que hacer hasta 3
+queries, para obtener la categoria padre de un objeto. Por eso, las cacheamos previamente
+'''
+
+class CategoriaThigi(models.Model):
+    name = models.CharField(max_length=100)
+    parent = models.ForeignKey('self',on_delete=models.SET_NULL,null=True)
+
+    def get_parent(self):
+        p = self
+        while not p.parent:
+             p = p.parent
+        return actual_parent
