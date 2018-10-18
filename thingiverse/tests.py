@@ -70,3 +70,15 @@ class ObjetoTest(APITransactionTestCase):
             time.sleep(0.1)
         self.assertEqual(len(objeto.files.all()), cantidad_inicial_de_archivos+2)
         print("Tiempo de importacion total de objeto: {}s".format(time.time()-t))
+
+class CategoriaThingiTest(APITransactionTestCase):
+    allow_database_queries = True
+
+    def setUp(self):
+        from populate import thingiverse_apikeys_setup
+        thingiverse_apikeys_setup(ApiKey)
+
+    def test_populate_categories(self):
+        from populate import populate_categories
+        populate_categories(request_from_thingi,settings,CategoriaThigi)
+        self.assertTrue(CategoriaThigi.objects.count()>2)

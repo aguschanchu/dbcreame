@@ -65,7 +65,7 @@ def thingiverse_apikeys_setup(ApiKey):
 
     print("API Keys (Thingiverse) added")
 
-def populate_categories(request_from_thingi):
+def populate_categories(request_from_thingi,settings,CategoriaThigi):
     print("Populando categorias")
     #Categorias base en Thingiverse. No deberian cambiar
     base_categories = request_from_thingi('categories')
@@ -141,6 +141,6 @@ if __name__ == '__main__':
     mercadopago_setup(MPAccount)
     social_accounts_config(Site,SocialApp)
     thingiverse_apikeys_setup(ApiKey)
-    populate_categories(request_from_thingi)
+    populate_categories(request_from_thingi,settings,CategoriaThigi)
     colors_setup(Color)
     testing_objects_setup()

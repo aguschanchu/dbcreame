@@ -19,10 +19,9 @@ class ObjetoTest(APITransactionTestCase):
     allow_database_queries = True
 
     def setUp(self):
-        from populate import thingiverse_apikeys_setup, superuser_setup, populate_categories
+        from populate import thingiverse_apikeys_setup, superuser_setup
         superuser_setup(User)
         thingiverse_apikeys_setup(ApiKey)
-        populate_categories()
         #Fueron importadas correctamente las API Keys?
         self.assertTrue(ApiKey.objects.count() > 0)
 
