@@ -66,6 +66,7 @@ def thingiverse_apikeys_setup(ApiKey):
     print("API Keys (Thingiverse) added")
 
 def populate_categories():
+    print("Populando categorias")
     #Categorias base en Thingiverse. No deberian cambiar
     base_categories = request_from_thingi('categories')
     for bcat in base_categories:

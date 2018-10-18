@@ -55,15 +55,26 @@ def get_thing_categories_list(thingiid):
         if cat['url'].split(endpoint)[1] == "categories/other":
             result.append('Other')
         else:
-            category_info = request_from_thingi(cat['url'].split(endpoint)[1])
-            category_name = category_info['name']
-            has_parent = 'parent' in category_info
-            #Es una subcategoria? De ser así, accedemos a la padre
-            while has_parent:
-                category_info = request_from_thingi(category_info['parent']['url'].split(endpoint)[1])
+            #Antes de buscar la categoria en Thingiverse, la tenemos cacheada?
+            cache_search = CategoriaThigi.objects.filter(name=cat['name'])
+            if cache_search:
+                result.append(cache_search.first().get_parent().name)
+            else:
+                print("No encontre el resultado en cache: {}".format(cat['name']))
+                print(cache_search)
+                category_info = request_from_thingi(cat['url'].split(endpoint)[1])
                 category_name = category_info['name']
                 has_parent = 'parent' in category_info
-            result.append(category_name)
+                #Es una subcategoria? De ser así, accedemos a la padre
+                while has_parent:
+                    category_info = request_from_thingi(category_info['parent']['url'].split(endpoint)[1])
+                    category_name = category_info['name']
+                    has_parent = 'parent' in category_info
+                #Guardamos el resultado de busqueda en el cache
+                parent = CategoriaThigi.objects.get_or_create(name=category_name,parent=None)[0]
+                if category_info['name'] != cat['name']:
+                    CategoriaThigi.objects.get_or_create(name=cat['name'],parent=parent)
+                result.append(category_name)
     return result
 
 @shared_task(autoretry_for=(TypeError,ValueError,MaxRetryError), retry_backoff=True, max_retries=50)

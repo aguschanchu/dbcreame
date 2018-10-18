@@ -14,7 +14,7 @@ from urllib3.exceptions import MaxRetryError
 '''
 A partir de una imagen, ejecuta las tareas de importacion para los resultados de busqueda
 '''
-@shared_task(bind=True,autoretry_for=(MaxRetryError,))
+@shared_task(bind=True,autoretry_for=(MaxRetryError,), max_retries=50, retry_backoff=True)
 def process_image(self,id):
     objeto = modelos.ImagenVisionAPI.objects.get(pk=id)
     client = gvision.ImageAnnotatorClient()

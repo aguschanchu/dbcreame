@@ -129,11 +129,11 @@ queries, para obtener la categoria padre de un objeto. Por eso, las cacheamos pr
 '''
 
 class CategoriaThigi(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100,primary_key=True)
     parent = models.ForeignKey('self',on_delete=models.SET_NULL,null=True)
 
     def get_parent(self):
         p = self
-        while not p.parent:
+        while p.parent:
              p = p.parent
-        return actual_parent
+        return p

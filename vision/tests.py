@@ -8,6 +8,7 @@ from django.db import IntegrityError
 from allauth.socialaccount.models import Site, SocialApp
 from django_mercadopago.models import Account as MPAccount
 from thingiverse.import_from_thingi import *
+from thingiverse.tasks import request_from_thingi
 from thingiverse.models import *
 from django.core.files import File
 import time
@@ -18,9 +19,10 @@ class ObjetoTest(APITransactionTestCase):
     allow_database_queries = True
 
     def setUp(self):
-        from populate import thingiverse_apikeys_setup, superuser_setup
+        from populate import thingiverse_apikeys_setup, superuser_setup, populate_categories
         superuser_setup(User)
         thingiverse_apikeys_setup(ApiKey)
+        populate_categories()
         #Fueron importadas correctamente las API Keys?
         self.assertTrue(ApiKey.objects.count() > 0)
 
