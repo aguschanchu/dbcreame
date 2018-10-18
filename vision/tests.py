@@ -46,6 +46,7 @@ class ObjetoTest(APITransactionTestCase):
         self.assertTrue(len(response) > 5)
         #Perfecto. Elegimos alguno, y pedimos que cargue todos los items!
         objeto = Objeto.objects.get(pk=response[0]['id'])
+        print(objeto)
         #Deberia ser un objeto parcial, importado en el test anterior
         self.assertEqual(objeto.partial, True)
         cantidad_inicial_de_archivos = len(objeto.files.all())

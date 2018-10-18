@@ -347,10 +347,12 @@ def update_render_and_model(sender, instance, update_fields, **kwargs):
     if instance.human_flag and update_fields == None:
         instance.combine_stl()
         instance.create_sfb()
-    #No queremos actualizar el objeto si solo fue flaggeado como rotado
-    if not 'rotated' in update_fields:
-        instance.modeloarrender.create_render()
-        instance.modeloarrender.save()
+    if update_fields != None:
+        #No queremos actualizar el objeto si solo fue flaggeado como rotado
+        if 'rotated' in update_fields:
+            return False
+    instance.modeloarrender.create_render()
+    instance.modeloarrender.save()
 
 
 '''

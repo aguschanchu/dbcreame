@@ -400,6 +400,8 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
                 print("Slicing tasks global tiemout (network error?)")
                 control.revoke(self.request.id)
                 objeto.delete()
+        except:
+            traceback.print_exc()
 
         #Le quitamos el flag de importacion parcial
         objeto.partial = False
