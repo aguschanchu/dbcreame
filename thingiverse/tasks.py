@@ -42,7 +42,7 @@ def request_from_thingi(url,content=False,params=''):
         print('No encontre API keys')
     else:
         traceback.print_exc()
-        print("URL qmax_retries¶ue intente acceder: "+endpoint+url+'?access_token='+str(k))
+        print("URL que intente acceder: "+endpoint+url+'?access_token='+str(k))
         raise ValueError("Error al hacer la request ¿hay API keys disponibles?")
 
 @shared_task(autoretry_for=(TypeError,ValueError,KeyError,MaxRetryError), retry_backoff=True, max_retries=50)

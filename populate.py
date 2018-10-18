@@ -65,12 +65,12 @@ def thingiverse_apikeys_setup(ApiKey):
 
     print("API Keys (Thingiverse) added")
 
-def populate_categories():
+def populate_categories(request_from_thingi):
     print("Populando categorias")
     #Categorias base en Thingiverse. No deberian cambiar
     base_categories = request_from_thingi('categories')
     for bcat in base_categories:
-        category_info = request_from_thingi(bcat['url'])
+        category_info = request_from_thingi(bcat['url'].split(settings.THINGIVERSE_API_ENDPOINT)[1])
         parent = CategoriaThigi.objects.create(name=category_info['name'])
         for child in category_info['children']:
             CategoriaThigi.objects.create(name=child['name'],parent=parent)
@@ -141,5 +141,6 @@ if __name__ == '__main__':
     mercadopago_setup(MPAccount)
     social_accounts_config(Site,SocialApp)
     thingiverse_apikeys_setup(ApiKey)
+    populate_categories(request_from_thingi)
     colors_setup(Color)
     testing_objects_setup()
