@@ -109,7 +109,7 @@ class CompraSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Compra
-        fields = ('id','buyer','purchased_objects','date','status','delivery_address','payment_preferences', 'delivery_address_char', 'delivery_address_notes')
+        fields = ('id','buyer','purchased_objects','date','status','delivery_address','payment_preferences', 'delivery_address_char', 'delivery_address_notes','thumbnail')
 
     #DRF no soporta creacion de objetos nesteados out-of-the-box, de modo, que reemplazamos el metodo de creacion
     def create(self, validated_data):

@@ -399,6 +399,9 @@ class Compra(models.Model):
     delivery_address = models.ForeignKey(DireccionDeEnvio,null=True,on_delete=models.SET_NULL,blank=True)
     payment_preferences = models.OneToOneField(MPModels.Preference,on_delete=models.CASCADE,blank=True,null=True)
 
+    def thumbnail(self):
+        return self.purchased_objects.first().object_id.main_image_thumbnail
+
 @receiver(post_save, sender=MPModels.Payment)
 def process_payment(sender, instance, created, **kwargs):
     if instance.status == "approved":

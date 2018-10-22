@@ -108,9 +108,8 @@ def testing_objects_setup():
         if ans == "Y":
             valid_input = True
             print("Importando objetos....")
-            add_object_from_thingiverse(1278865)
-            add_object_from_thingiverse(1179160)
-            add_object_from_thingiverse(2836304)
+            ObjetoThingi.objects.create_object(external_id=1278865, origin='human')
+            ObjetoThingi.objects.create_object(external_id=1179160, origin='human')
         elif ans == "N":
             valid_input = True
     print("Objects added")
