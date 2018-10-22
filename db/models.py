@@ -387,15 +387,18 @@ class DireccionDeEnvio(models.Model):
 class Compra(models.Model):
     estados = (
         ('pending-payment', 'Pago pendiente'),
+        ('checkout-pending', 'Proceso de checkout no iniciado')
         ('accepted', 'Aceptado'),
         ('printing', 'Imprimiendo'),
         ('shipped', 'Enviado'),
         ('completed', 'Completado'),
+        ('canceled', 'Cancelado'),
+        ('error' , 'Error')
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,blank=True)
     buyer = models.ForeignKey(Usuario,on_delete=models.CASCADE,blank=True,null=True)
     date = models.DateTimeField(default=timezone.now,blank=True)
-    status = models.CharField(choices=estados,max_length=300,blank=True,default='pending-payment')
+    status = models.CharField(choices=estados,max_length=300,blank=True,default='checkout-pending')
     delivery_address = models.ForeignKey(DireccionDeEnvio,null=True,on_delete=models.SET_NULL,blank=True)
     payment_preferences = models.OneToOneField(MPModels.Preference,on_delete=models.CASCADE,blank=True,null=True)
 
