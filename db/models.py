@@ -387,7 +387,7 @@ class DireccionDeEnvio(models.Model):
 class Compra(models.Model):
     estados = (
         ('pending-payment', 'Pago pendiente'),
-        ('checkout-pending', 'Proceso de checkout no iniciado')
+        ('checkout-pending', 'Proceso de checkout no iniciado'),
         ('accepted', 'Aceptado'),
         ('printing', 'Imprimiendo'),
         ('shipped', 'Enviado'),

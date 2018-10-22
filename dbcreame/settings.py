@@ -212,6 +212,7 @@ DB_ADMIN_PASSWORD = 'Ferraro'
 
 #Configuracion de APIs de Google (Translate y Vision)
 GOOGLE_APPLICATION_CREDENTIALS = "google_credentials.json"
+GOOGLE_MAPS_API_KEY = " ***REMOVED***"
 
 #Configuracion de Vision
 VISION_RESULTS_AMOUNT = 10

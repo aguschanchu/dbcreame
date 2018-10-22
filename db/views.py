@@ -11,6 +11,7 @@ import json
 import traceback
 from django_mercadopago import models as MPModels
 import mercadopago
+from . import tasks
 # Auth
 from django.contrib.auth.models import User
 from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
@@ -163,6 +164,20 @@ class CreateOrderView(generics.CreateAPIView):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+class CheckoutSuccessNotification(generics.RetrieveAPIView):
+    serializer_class = CompraSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        #Cambiamos el estado de la instancia
+        instance.status = 'pending-payment'
+        instance.save()
+        #Ejecutamos la comprobacion de pago
+        tasks.query_mp_for_payment_status.delay(instance.id)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
 '''
 Operations views
 '''
@@ -243,8 +258,6 @@ class UserInformationView(generics.RetrieveUpdateAPIView):
 '''
 DB Operations view
 '''
-
-
 
 class SendAppSetupInformation(APIView):
     def get(self, request, format=None):

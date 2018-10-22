@@ -21,6 +21,8 @@ def mercadopago_setup(MPAccount):
         acc.app_id = "***REMOVED***"
     else:
         print("ERROR: No se encontraron configuraciones de MP para este dominio")
+        acc.secret_key = "***REMOVED***"
+        acc.app_id = "***REMOVED***"
     acc.sandbox = True
     acc.save()
     print("Mecadopago added")

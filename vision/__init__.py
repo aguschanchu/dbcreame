@@ -1,2 +1,3 @@
 import os
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = 'google_credentials.json'
+from django.conf import settings
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = settings.GOOGLE_APPLICATION_CREDENTIALS
