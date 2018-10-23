@@ -136,7 +136,7 @@ class CompraAdmin(admin.ModelAdmin):
 
 @admin.register(DireccionDeEnvio)
 class CompraAdmin(admin.ModelAdmin):
-    list_display = ('address','usuario','notes')
+    list_display = ('short_address','usuario','notes')
 
 @admin.register(Imagen)
 class ImagenAdmin(admin.ModelAdmin):

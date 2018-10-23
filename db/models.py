@@ -396,7 +396,7 @@ class DireccionDeEnvio(models.Model):
         self.long_address = result
         self.save(update_fields=['long_address'])
 
-    def address(self):
+    def short_address(self):
         if not self.long_address:
             self.update_long_address()
         return self.long_address.split(',')[0]

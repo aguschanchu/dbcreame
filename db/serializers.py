@@ -100,24 +100,23 @@ class PaymentNotificationSerializer(serializers.ModelSerializer):
 class DireccionDeEnvioSerializer(serializers.ModelSerializer):
     class Meta:
         model = DireccionDeEnvio
-        fields = ('address','notes','last_time_used','long_address','gmaps_id')
+        fields = ('short_address','notes','last_time_used','long_address','gmaps_id')
 
 class CompraSerializer(serializers.ModelSerializer):
     purchased_objects = ObjetoPersonalizadoSerializer(many=True)
     payment_preferences = PaymentPreferencesSerializer(required=False, allow_null=True)
     delivery_address = DireccionDeEnvioSerializer(required=False)
-    delivery_address_gmaps_id = serializers.CharField(max_length=300, allow_null=True)
-    delivery_address_notes = serializers.CharField(max_length=300, allow_null=True, required=False)
 
     class Meta:
         model = Compra
-        fields = ('id','buyer','purchased_objects','date','status','payment_preferences', 'delivery_address_gmaps_id', 'delivery_address_notes','delivery_address')
+        fields = ('id','buyer','purchased_objects','date','status','payment_preferences','delivery_address')
 
     #DRF no soporta creacion de objetos nesteados out-of-the-box, de modo, que reemplazamos el metodo de creacion
     def create(self, validated_data):
         #Obtenemos DireccionDeEnvio a partir de delivery_address_char
-        delivery_address, created = DireccionDeEnvio.objects.get_or_create(gmaps_id=validated_data.pop('delivery_address_gmaps_id'),usuario=self.context['request'].user.usuario)
-        notes = validated_data.pop('delivery_address_notes') if 'delivery_address_notes' in validated_data.keys() else None
+        delivery_address_data = validated_data.pop('delivery_address')
+        delivery_address, created = DireccionDeEnvio.objects.get_or_create(gmaps_id=delivery_address_data['gmaps_id'],usuario=self.context['request'].user.usuario)
+        notes = delivery_address_data['notes'] if 'notes' in delivery_address_data else None
         if created:
             delivery_address.notes = notes
         ## Actualizamos la ultima vez que se uso esta direccion
