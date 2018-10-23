@@ -161,8 +161,10 @@ class CreateOrderView(generics.CreateAPIView):
         preferenceResult = mp_client.update_preference(compra.payment_preferences.mp_id, preference)
         #Devolvemos el resultado
         compra.save()
+        serializer = self.get_serializer(compra)
+        print('asd')
         headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(serializer.data)
 
 class CheckoutSuccessNotification(generics.RetrieveAPIView):
     serializer_class = CompraSerializer

@@ -13,6 +13,7 @@ import datetime
 import os
 import shutil
 import trimesh
+import googlemaps
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -376,13 +377,28 @@ def save_user_profile(sender, instance, **kwargs):
     instance.usuario.save()
 
 class DireccionDeEnvio(models.Model):
+    #Corresponde al place_id de gmaps
+    gmaps_id = models.CharField(max_length=150)
+    notes = models.CharField(max_length=300,blank=True,default=None,null=True)
     usuario = models.ForeignKey(Usuario,on_delete=models.CASCADE,related_name='address_book')
     last_time_used = models.DateTimeField(default=timezone.now,blank=True)
-    address = models.CharField(max_length=300,primary_key=True)
-    notes = models.CharField(max_length=300,blank=True,default=None,null=True)
+    #Cacheamos la direccion para evitar queries al pedo
+    long_address = models.CharField(max_length=300,default=None,null=True)
 
     class Meta:
         ordering = ['last_time_used']
+
+    #Obtenemos la long_address de googlemaps
+    def update_long_address(self):
+        client = googlemaps.Client(key=settings.GOOGLE_MAPS_API_KEY)
+        result = client.reverse_geocode(self.gmaps_id)[0]['formatted_address']
+        self.long_address = result
+        self.save(update_fields=['long_address'])
+
+    def address(self):
+        if not self.long_address:
+            self.update_long_address()
+        return self.long_address.split(',')[0]
 
 class Compra(models.Model):
     estados = (
