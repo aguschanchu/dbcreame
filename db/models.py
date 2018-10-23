@@ -192,6 +192,12 @@ class Objeto(models.Model):
     def printing_time_default_total(self):
         return round(sum([sum(a.time_as_a_function_of_scale.coefficients_list()) for a in self.files.all()]))
 
+    def min_dimension(self):
+        return min([a.size_x_default for a in self.files.all()]+[a.size_y_default for a in self.files.all()]+[a.size_z_default for a in self.files.all()])
+
+    def max_dimension(self):
+        return max([a.size_x_default for a in self.files.all()]+[a.size_y_default for a in self.files.all()]+[a.size_z_default for a in self.files.all()])
+
     @staticmethod
     def search_objects(query):
         objetos_n = Objeto.objects.none()
