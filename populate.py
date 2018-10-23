@@ -77,7 +77,10 @@ def populate_categories(request_from_thingi,settings,CategoriaThigi):
         for child in category_info['children']:
             CategoriaThigi.objects.create(name=child['name'],parent=parent)
 
-def colors_setup(Color):
+def colors_setup(Color, settings):
+    if __name__ != '__main__':
+        import os, subprocess
+        from django.core.files import File
     print("Initiating colors population...")
     #Color population
     color_list = [('Blanco','FFFFFF'),('Verde oscuro','013100'),('Verde claro','12B50C'),('Celeste','0A73B8'),('Amarillo','FFF208'),('Azul','0954F5'),('Naranja','FF8400'),('Rojo','793A00'),('Gris','606060'),('Negro','000000')]
@@ -143,5 +146,5 @@ if __name__ == '__main__':
     social_accounts_config(Site,SocialApp)
     thingiverse_apikeys_setup(ApiKey)
     populate_categories(request_from_thingi,settings,CategoriaThigi)
-    colors_setup(Color)
+    colors_setup(Color, settings)
     testing_objects_setup()

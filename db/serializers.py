@@ -106,7 +106,7 @@ class DireccionDeEnvioSerializer(serializers.ModelSerializer):
 class CompraSerializer(serializers.ModelSerializer):
     purchased_objects = ObjetoPersonalizadoSerializer(many=True)
     payment_preferences = PaymentPreferencesSerializer(required=False, allow_null=True)
-    delivery_address = DireccionDeEnvioSerializer(required=False)
+    delivery_address = DireccionDeEnvioSerializer()
 
     class Meta:
         model = Compra

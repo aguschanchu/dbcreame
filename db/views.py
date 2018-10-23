@@ -169,6 +169,7 @@ class CreateOrderView(generics.CreateAPIView):
 class CheckoutSuccessNotification(generics.RetrieveAPIView):
     serializer_class = CompraSerializer
     permission_classes = (IsAuthenticated,)
+    lookup_url_kwarg = 'id'
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -176,7 +177,7 @@ class CheckoutSuccessNotification(generics.RetrieveAPIView):
         instance.status = 'pending-payment'
         instance.save()
         #Ejecutamos la comprobacion de pago
-        tasks.query_mp_for_payment_status.delay(instance.id)
+        tasks.query_mp_for_payment_status.delay(instance.payment_preferences.id)
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 

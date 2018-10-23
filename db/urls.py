@@ -33,9 +33,10 @@ path('profile/',views.UserInformationView.as_view()),
 ]
 #Ordenes
 urlpatterns += [
-path('orders/place/',views.CreateOrderView.as_view(), name='place_order'),
+path('orders/place/', views.CreateOrderView.as_view(), name='place_order'),
 path('orders/list/', views.ListAllOrdersView.as_view()),
-path('orders/preference/<str:mpid>/',views.GetPreferenceInfoFromMP.as_view()),
+path('orders/preference/<str:mpid>/', views.GetPreferenceInfoFromMP.as_view()),
+path('orders/checkout_successful/<uuid:id>/', views.CheckoutSuccessNotification.as_view(),name='checkout_successful'),
 ]
 #External tools
 urlpatterns += [
