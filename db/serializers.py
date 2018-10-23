@@ -103,13 +103,14 @@ class DireccionDeEnvioSerializer(serializers.ModelSerializer):
 class CompraSerializer(serializers.ModelSerializer):
     purchased_objects = ObjetoPersonalizadoSerializer(many=True)
     payment_preferences = PaymentPreferencesSerializer(required=False, allow_null=True)
-    #delivery_address = DireccionDeEnvioSerializer(required=False)
-    delivery_address_gmaps_id = serializers.CharField(max_length=300, allow_null=True, required=False)
+    delivery_address = DireccionDeEnvioSerializer(required=False)
+    delivery_address_gmaps_id = serializers.CharField(max_length=300, allow_null=True)
     delivery_address_notes = serializers.CharField(max_length=300, allow_null=True, required=False)
+    thumbnail = serializers.ImageField(allow_empty_file=True,read_only=True)
 
     class Meta:
         model = Compra
-        fields = ('id','buyer','purchased_objects','date','status','payment_preferences', 'delivery_address_gmaps_id', 'delivery_address_notes','thumbnail')
+        fields = ('id','buyer','purchased_objects','date','status','payment_preferences', 'delivery_address_gmaps_id', 'delivery_address_notes','delivery_address','thumbnail')
 
     #DRF no soporta creacion de objetos nesteados out-of-the-box, de modo, que reemplazamos el metodo de creacion
     def create(self, validated_data):
