@@ -80,9 +80,11 @@ en forma nesteada una compra; simplificando la creacion de estas.
 '''
 
 class ObjetoPersonalizadoSerializer(serializers.ModelSerializer):
+    thumbnail = serializers.ImageField(allow_empty_file=True,read_only=True)
+
     class Meta:
         model = ObjetoPersonalizado
-        fields = ('name','object_id','color','scale','quantity')
+        fields = ('name','object_id','color','scale','quantity','thumbnail')
         extra_kwargs = {'color': {'required': True}}
 
 class PaymentPreferencesSerializer(serializers.ModelSerializer):
@@ -106,11 +108,10 @@ class CompraSerializer(serializers.ModelSerializer):
     delivery_address = DireccionDeEnvioSerializer(required=False)
     delivery_address_gmaps_id = serializers.CharField(max_length=300, allow_null=True)
     delivery_address_notes = serializers.CharField(max_length=300, allow_null=True, required=False)
-    thumbnail = serializers.ImageField(allow_empty_file=True,read_only=True)
 
     class Meta:
         model = Compra
-        fields = ('id','buyer','purchased_objects','date','status','payment_preferences', 'delivery_address_gmaps_id', 'delivery_address_notes','delivery_address','thumbnail')
+        fields = ('id','buyer','purchased_objects','date','status','payment_preferences', 'delivery_address_gmaps_id', 'delivery_address_notes','delivery_address')
 
     #DRF no soporta creacion de objetos nesteados out-of-the-box, de modo, que reemplazamos el metodo de creacion
     def create(self, validated_data):
@@ -135,7 +136,6 @@ class CompraSerializer(serializers.ModelSerializer):
 '''
 Serializadores accesorios
 '''
-
 
 class SfbRotationTrackerSerializer(serializers.ModelSerializer):
     class Meta:

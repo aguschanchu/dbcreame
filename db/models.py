@@ -419,9 +419,6 @@ class Compra(models.Model):
     delivery_address = models.ForeignKey(DireccionDeEnvio,null=True,on_delete=models.SET_NULL,blank=True)
     payment_preferences = models.OneToOneField(MPModels.Preference,on_delete=models.CASCADE,blank=True,null=True)
 
-    def thumbnail(self):
-        return self.purchased_objects.first().object_id.main_image_thumbnail
-
 @receiver(post_save, sender=MPModels.Preference)
 def check_mp_for_payment_status(sender, instance, created, **kwargs):
     #Ejecutamos la tarea que revise periodicamente el estado de compra
@@ -445,6 +442,10 @@ class ObjetoPersonalizado(models.Model):
 
     def name(self):
         return self.object_id.name
+
+    def thumbnail(self):
+        return self.object_id.main_image_thumbnail
+
 
 #Utilizados para actualizar el color pricipal cuando se genera una orden nueva
 @receiver(post_save, sender=ObjetoPersonalizado)
