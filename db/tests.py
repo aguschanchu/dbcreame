@@ -32,4 +32,9 @@ class TestPurchase(APITransactionTestCase):
 
     def test_MP_purchase(self):
         url = reverse('db:place_order')
-        data = {'purchased_objects': [{'object_id' : objeto.object_id,'color': Color.objects.first().id, 'scale': 1, 'quantity': 1}]}
+        data = {'purchased_objects': [{'object_id' : objeto.object_id,'color': Color.objects.first().id, 'scale': 1, 'quantity': 1}],
+                #Es la direccion de casa
+                'delivery_address_gmaps_id': 'ChIJP2unpHu1vJUR4HQAhsGujOQ',
+                'delivery_address_notes': 'Notas muy importantes'
+                }
+                

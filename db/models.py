@@ -8,6 +8,7 @@ from .tools import stl_to_sfb
 from .tools import dbdispatcher
 from .render.blender import render_image
 from .render.plot_poly import polyplot
+from . import tasks
 import uuid
 import datetime
 import os
@@ -15,7 +16,7 @@ import shutil
 import trimesh
 import googlemaps
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.conf import settings
 from google.cloud import translate
@@ -420,6 +421,14 @@ class Compra(models.Model):
 
     def thumbnail(self):
         return self.purchased_objects.first().object_id.main_image_thumbnail
+
+@receiver(post_save, sender=MPModels.Preference)
+def check_mp_for_payment_status(sender, instance, created, **kwargs):
+    #Ejecutamos la tarea que revise periodicamente el estado de compra
+    #este es un hotfix hasta que funcione MP
+    if created:
+        tasks.query_mp_for_payment_status.delay(instance.pk)
+
 
 @receiver(post_save, sender=MPModels.Payment)
 def process_payment(sender, instance, created, **kwargs):

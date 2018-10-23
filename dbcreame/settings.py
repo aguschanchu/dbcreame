@@ -195,7 +195,7 @@ MERCADOPAGO = {
     'base_host': CURRENT_PROTOCOL + '://' + CURRENT_HOST
 }
 #Significa que todos los pagos son tomados como validos
-MERCADOPAGO_SANDBOX_MODE = False
+MERCADOPAGO_SANDBOX_MODE = True
 
 #Celery config
 CELERY_RESULT_BACKEND = 'django-db'

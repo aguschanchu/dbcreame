@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from django.http import Http404
-from thingiverse import import_from_thingi
+from django.db.models import Q
 from db.tools import price_calculator
 import json
 import traceback
@@ -40,7 +40,7 @@ class CategoryView(generics.ListAPIView):
 
     def get_queryset(self):
         category = self.kwargs.get(self.lookup_url_kwarg)
-        objetos = Objeto.objects.filter(category__name=category)
+        objetos = Objeto.objects.filter(category__name=category,origin='human')
         return objetos
 
 class TagView(generics.ListAPIView):
@@ -126,7 +126,7 @@ class ListAllOrdersView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Compra.objects.filter(buyer=user.usuario)
+        return Compra.objects.filter(Q(buyer=user.usuario) & ~Q(status='checkout-pending'))
 
 class GetPreferenceInfoFromMP(APIView):
     def post(self, request, mpid, format=None):
