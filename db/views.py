@@ -171,6 +171,14 @@ class CheckoutSuccessNotification(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
     lookup_url_kwarg = 'id'
 
+    def get_object(self):
+        id = self.kwargs.get(self.lookup_url_kwarg)
+        try:
+            objeto = Compra.objects.get(id=id)
+        except Compra.DoesNotExist:
+             raise Http404
+        return objeto
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         #Cambiamos el estado de la instancia
