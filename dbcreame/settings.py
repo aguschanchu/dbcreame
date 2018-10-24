@@ -238,6 +238,3 @@ VISION_RESULTS_AMOUNT = 10
 
 #Configuraciones de precios
 PRECIO_POR_HORA_DE_IMPRESION = 40
-## Configuracion de descuento por volumen precio_c_descuento = a*(precio_sin_descuento)^b
-PRECIO_DESCUENTO_VOLUMEN_A = 1
-PRECIO_DESCUENTO_VOLUMEN_B = 1

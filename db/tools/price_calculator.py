@@ -4,10 +4,9 @@ import numpy as np
 def segundos_a_pesos(segs):
     horas_de_impresion = segs/3600
     hora_base = settings.PRECIO_POR_HORA_DE_IMPRESION
-    a = settings.PRECIO_DESCUENTO_VOLUMEN_A
-    b = settings.PRECIO_DESCUENTO_VOLUMEN_B
+    precio = (20*horas_de_impresion+5*min(horas_de_impresion,5)+5*min(horas_de_impresion,15)+5*min(horas_de_impresion,25)+5*min(horas_de_impresion,35))
     #Aplicamos el descuento en volumen precio_c_descuento = a*(precio_sin_descuento)^b
-    return a*(horas_de_impresion*hora_base)**b
+    return precio
 
 def get_order_price(compra):
     total_price = 0
