@@ -32,6 +32,12 @@ urlpatterns += [
 url(r'^db/mercadopago/', include(('django_mercadopago.urls','mercadopago'), namespace='mp')),
 ]
 
+#Allauth
+urlpatterns += [
+url(r'^social_accounts/', include('allauth.urls'), name='socialaccount_signup'),
+]
+
+
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 admin.site.site_header = settings.ADMIN_SITE_HEADER
