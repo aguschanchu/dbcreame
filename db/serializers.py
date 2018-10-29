@@ -75,7 +75,7 @@ en forma nesteada una compra; simplificando la creacion de estas.
 '''
 
 class ObjetoPersonalizadoSerializer(serializers.ModelSerializer):
-    thumbnail = serializers.ImageField(allow_empty_file=True,read_only=True)
+    thumbnail = serializers.ImageField(allow_empty_file=True,read_only=True,use_url=True)
 
     class Meta:
         model = ObjetoPersonalizado

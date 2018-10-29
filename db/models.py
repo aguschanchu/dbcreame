@@ -162,12 +162,14 @@ class Objeto(models.Model):
     #Fueron descargados los STL? (y objetos relacionados con este)
     partial = models.BooleanField(default=False)
 
+    @property
     def main_image(self):
         if self.images.filter(main=True).exists():
             return self.images.filter(main=True).first().photo
         else:
             return None
 
+    @property
     def main_image_thumbnail(self):
         if self.images.filter(main=True).exists():
             return self.images.filter(main=True).first().thumbnail
