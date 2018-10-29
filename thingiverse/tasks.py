@@ -190,9 +190,9 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
 def download_images_task_group(it,partial):
     # Map a callback over an iterator and return as a group
     res = [translate_name.s(it[0])]
-    res.append(download_main_image.s(it[0],it[1][0]))
+    res.append(download_image.s(it[0],it[1].pop(0),True))
     for i in it[1]:
-        res.append(download_additional_image.s(it[0],i))
+        res.append(download_image.s(it[0],i,False))
     g = group(res).apply_async()
     if partial:
         return (it[0],g.id)
@@ -200,24 +200,14 @@ def download_images_task_group(it,partial):
         return (it[0],0)
 
 @shared_task(autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
-def download_main_image(objeto_id, url):
-    objeto = modelos.Objeto.objects.get(pk=objeto_id)
-    path = download_file(url)
-    with open(path,'rb') as file:
-            image_file = File(file)
-            objeto.main_image.save(urlparse(url).path.split('/')[-1],image_file)
-    objeto.save(update_fields=['main_image'])
-    os.remove(path)
-    return True
-
-@shared_task(autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
-def download_additional_image(objeto_id, url):
+def download_image(objeto_id, url, main):
     objeto = modelos.Objeto.objects.get(pk=objeto_id)
     imagen = modelos.Imagen()
     path = download_file(url)
     with open(path,'rb') as file:
             image_file = File(file)
             imagen.photo.save(urlparse(url).path.split('/')[-1],image_file)
+            imagen.main = main
             os.remove(path)
     imagen.object = objeto
     imagen.save()

@@ -78,6 +78,7 @@ def populate_categories(request_from_thingi,settings,CategoriaThigi):
             CategoriaThigi.objects.create(name=child['name'],parent=parent)
 
 def colors_setup(Color, settings):
+    global subprocess, File, os
     if __name__ != '__main__':
         import os, subprocess
         from django.core.files import File
@@ -138,7 +139,8 @@ if __name__ == '__main__':
     from db.models import *
     from django.core.files import File
     from thingiverse.import_from_thingi import *
-    import os, subprocess
+    import os
+    import subprocess
     print('Populating Database...')
     print('----------------------\n')
     superuser_setup(User)

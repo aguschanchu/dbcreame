@@ -145,8 +145,6 @@ class Objeto(models.Model):
     name_es = models.CharField(max_length=300,null=True,blank=True)
     description = models.TextField(blank=True,null=True)
     like_count = models.IntegerField(blank=True,default=0)
-    main_image = models.ImageField(upload_to='images/',null=True)
-    main_image_thumbnail = ImageSpecField(source='main_image', processors=[ResizeToFit(width=800, height=600, upscale=False)], format='JPEG', options={'quality': 40})
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
     creation_date = models.DateTimeField(default=timezone.now)
     category = models.ManyToManyField(Categoria)
@@ -163,6 +161,18 @@ class Objeto(models.Model):
     origin = models.CharField(choices=origenes,max_length=30,null=True)
     #Fueron descargados los STL? (y objetos relacionados con este)
     partial = models.BooleanField(default=False)
+
+    def main_image(self):
+        if self.images.filter(main=True).exists():
+            return self.images.filter(main=True).first().photo
+        else:
+            return None
+
+    def main_image_thumbnail(self):
+        if self.images.filter(main=True).exists():
+            return self.images.filter(main=True).first().thumbnail
+        else:
+            return None
 
     def suggested_color(self):
         if self.default_color != None:
@@ -193,10 +203,16 @@ class Objeto(models.Model):
         return round(sum([sum(a.time_as_a_function_of_scale.coefficients_list()) for a in self.files.all()]))
 
     def min_dimension(self):
-        return min([a.size_x_default for a in self.files.all()]+[a.size_y_default for a in self.files.all()]+[a.size_z_default for a in self.files.all()])
+        if not self.partial:
+            return min([a.size_x_default for a in self.files.all()]+[a.size_y_default for a in self.files.all()]+[a.size_z_default for a in self.files.all()])
+        else:
+            return None
 
     def max_dimension(self):
-        return max([a.size_x_default for a in self.files.all()]+[a.size_y_default for a in self.files.all()]+[a.size_z_default for a in self.files.all()])
+        if not self.partial:
+            return max([a.size_x_default for a in self.files.all()]+[a.size_y_default for a in self.files.all()]+[a.size_z_default for a in self.files.all()])
+        else:
+            return None
 
     @staticmethod
     def search_objects(query):
@@ -235,7 +251,11 @@ class ArchivoSTL(models.Model):
 class Imagen(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     photo = models.ImageField(upload_to='images/')
+    thumbnail = ImageSpecField(source='photo',
+                                          processors=[ResizeToFit(width=800, height=600, upscale=False)], format='JPEG',
+                                          options={'quality': 40})
     object = models.ForeignKey(Objeto,blank=True,null=True,on_delete=models.CASCADE,related_name='images')
+    main = models.BooleanField(default=False)
 
     def __str__(self):
         return self.photo.name

@@ -43,14 +43,8 @@ class ObjetoSerializer(serializers.ModelSerializer):
             return False
     liked = serializers.SerializerMethodField('liked_get')
 
-    def main_image_thumbnail_url(self,obj):
-        if settings.CURRENT_HOST not in ['80','443']:
-            base_url = settings.CURRENT_PROTOCOL+ '://' + settings.CURRENT_HOST + ':' + str(settings.CURRENT_PORT)
-        else:
-            base_url = settings.CURRENT_PROTOCOL+ '://' + settings.CURRENT_HOST
-        return base_url + obj.main_image_thumbnail.url
-
-    main_image_thumbnail = serializers.SerializerMethodField('main_image_thumbnail_url')
+    main_image_thumbnail = serializers.ImageField(allow_null=True,use_url=True)
+    main_image = serializers.ImageField(allow_null=True,use_url=True)
     files = ArchivoSTLSerializer(many=True)
     images = ImagenSerializer(many=True)
     ar_model = ModeloArSerializer(source='modeloar')
