@@ -1,8 +1,8 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.postgres.fields import ArrayField
 from celery.result import AsyncResult
 from db import models as modelos
-from . import tasks
 import datetime
 import json
 import traceback
@@ -50,7 +50,9 @@ class QueryEvent(models.Model):
     key = models.ForeignKey(ApiKey, on_delete=models.CASCADE, related_name='meter')
 
 class ObjetoThingiManager(models.Manager):
+
     def create_object(self, external_id, file_list=None, partial=False, origin=None, update_object=False, subtask_ids_list = None):
+        from . import tasks
         object = self.create(external_id=external_id, file_list=file_list, partial=partial)
         # Ejecutamos la tarea
         job = tasks.add_object_from_thingiverse_chain(thingiid=external_id, file_list=file_list, partial=partial, origin=origin).apply_async(max_retries=300)
@@ -59,6 +61,7 @@ class ObjetoThingiManager(models.Manager):
         return object
 
     def update_object(self, object_id, file_list=None, update_object=True, partial=False, subtask_ids_list = None):
+        from . import tasks
         object = self.create(object_id=object_id,external_id=object_id.external_id.external_id, file_list=file_list, partial=partial, update_object=update_object)
         job = tasks.add_files_to_thingiverse_object.delay([object_id.id], file_list)
         object.celery_id = job.id
@@ -137,3 +140,15 @@ class CategoriaThigi(models.Model):
         while p.parent:
              p = p.parent
         return p
+
+'''
+Clases de referencia external. Estos se utilizan para completar informacion de la DB, propia al repositorio en cuestion
+'''
+
+class AtributoExterno(models.Model):
+    reference = models.OneToOneField('db.ReferenciaExterna', on_delete=models.CASCADE, related_name='thingiverse_attributes')
+    license = models.CharField(max_length=200, null=True)
+    like_count = models.IntegerField(default=0)
+    download_count = models.IntegerField(default=0)
+    added = models.DateTimeField(default=timezone.now)
+    original_file_count = models.IntegerField(default=0)

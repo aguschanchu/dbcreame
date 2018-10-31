@@ -1,9 +1,8 @@
 from __future__ import absolute_import, unicode_literals
 from celery import shared_task, chord, group
-from .models import ApiKey
 from db import models as modelos
 from django.db import models
-from thingiverse.models import *
+from .models import *
 import datetime
 import os
 import requests
@@ -25,6 +24,8 @@ urllib3.disable_warnings()
 from google.cloud import translate
 from celery.task import control
 from celery.exceptions import SoftTimeLimitExceeded
+import dateutil.parser
+from thingiverse.things_filter import complete_filter_func
 
 @shared_task(autoretry_for=(TypeError,ValueError,MaxRetryError), retry_backoff=True, max_retries=50)
 def request_from_thingi(url,content=False,params=''):
@@ -78,9 +79,8 @@ def get_thing_categories_list(thingiid):
     return result
 
 @shared_task(autoretry_for=(TypeError,ValueError,MaxRetryError), retry_backoff=True, max_retries=50)
-def download_file(url):
+def download_file(url, name = ''):
     http = PoolManager(retries=Retry(total=2, backoff_factor=0.1, status_forcelist=list(range(400,501))))
-    name = urlparse(url).path.split('/')[-1]
     path = 'tmp/'+''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + name
     try:
         with open(path,'wb') as file:
@@ -88,7 +88,10 @@ def download_file(url):
     except:
         print("Error al descargar imagen")
         raise ValueError
-    return path
+    if name != '':
+        return (path, name)
+    else:
+        return path
 
 @shared_task(ignore_result=True)
 def translate_tag(tag_id):
@@ -152,13 +155,21 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
                 referencia_externa = refext
     else:
         #Procedemos a crear la ref externa
-        referencia_externa = modelos.ReferenciaExterna.objects.create(repository='thingiverse',external_id=r['main']['id'])
+        referencia_externa = modelos.ReferenciaExterna.objects.create(repository='thingiverse', external_id=r['main']['id'])
+
+    ## Atributos externos
+    extattr = AtributoExterno.objects.create(reference=referencia_externa, license=r['main']['license'], like_count=r['main']['like_count'],
+                                             download_count=r['main']['download_count'], added=dateutil.parser.parse(r['main']['added']),
+                                             original_file_count=r['main']['file_count'])
+
     ## Autor
     autor = modelos.Autor.objects.get_or_create(username=r['main']['creator']['name'],name=r['main']['creator']['first_name'])[0]
+
     ## Categorias
     categorias = []
     ### Veamos que categorias existen, en la DB. Las que no, las creamos.
     for cat in r['categories']:
+
         categorias.append(modelos.Categoria.objects.get_or_create(name=cat)[0])
     ## Tags
     tags = []
@@ -183,6 +194,13 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
         objeto.category.add(categoria)
     for tag in tags:
         objeto.tags.add(tag)
+
+    ### Ya con todos los datos, pasamos la thing por el filtro
+    if 'origin' != 'human':
+        objeto.filter_passed = complete_filter_func(objeto)
+    else:
+        objeto.filter_passed = True
+    objeto.save(update_fields=['filter_passed'])
 
     return (objeto.id, [j['sizes'][12]['url'] for j in r['img']])
 
@@ -215,6 +233,7 @@ def download_image(objeto_id, url, main):
 
 @shared_task(bind=True,autoretry_for=(TypeError,ValueError,MaxRetryError,ConnectionResetError), retry_backoff=True, max_retries=50)
 def add_files_to_thingiverse_object(self, object_id, file_list = None, override = False, debug = True):
+        allowed_extensions = ['.stl']
         try:
             objeto = modelos.Objeto.objects.get(pk=object_id[0])
         except:
@@ -260,10 +279,10 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
                 for thing_file in rfiles:
                     if id == thing_file['id']:
                         name = thing_file['name']
-                        if '.stl' in name.lower():
+                        if any(s in name.lower() for s in allowed_extensions):
                             download_url = thing_file['download_url']
-                            st = download_file.delay(download_url+'?access_token='+ApiKey.get_api_key())
-                            ObjetoThingiSubtask.objects.create(parent_task=task,celery_id=st.id)
+                            st = download_file.delay(download_url+'?access_token='+ApiKey.get_api_key(),name=name)
+                            ObjetoThingiSubtask.objects.create(parent_task=task, celery_id=st.id)
             else:
                 raise self.retry(countdown=5)
                 return False
@@ -277,11 +296,13 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
         archivos = []
         for link in archivos_link:
             try:
-                with open(link,'rb') as file:
+                with open(link[0],'rb') as file:
                     archivo = modelos.ArchivoSTL()
                     archivo.file.save(objeto.external_id.repository+'-'+str(objeto.external_id.external_id)+'.stl',File(file))
+                    archivo.original_filename = link[1]
+                    archivo.save(update_fields=['original_filename'])
                     archivos.append(archivo)
-                    os.remove(link)
+                    os.remove(link[0])
                     task.remove_subtask_by_result(link)
             except:
                 print(link)

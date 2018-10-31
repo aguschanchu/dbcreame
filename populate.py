@@ -115,7 +115,9 @@ def testing_objects_setup():
             valid_input = True
             print("Importando objetos....")
             ObjetoThingi.objects.create_object(external_id=1278865, origin='human')
-            ObjetoThingi.objects.create_object(external_id=1179160, origin='human')
+            ObjetoThingi.objects.create_object(external_id=1179160)
+            ObjetoThingi.objects.create_object(external_id=2803935)
+
         elif ans == "N":
             valid_input = True
     print("Objects added")

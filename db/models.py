@@ -3,7 +3,6 @@ from django.utils.safestring import mark_safe
 from django.utils import timezone
 from django.core.files import File
 from django.core.files.base import ContentFile
-from thingiverse.tasks import translate_category, translate_tag
 from .tools import stl_to_sfb
 from .tools import dbdispatcher
 from .render.blender import render_image
@@ -60,6 +59,7 @@ class Categoria(models.Model):
 
 @receiver(post_save, sender=Categoria)
 def translate_category_signal(sender, instance, created, **kwargs):
+    from thingiverse.tasks import translate_category
     if created:
         translate_category.delay(instance.id)
 
@@ -81,6 +81,7 @@ class Tag(models.Model):
 
 @receiver(post_save, sender=Tag)
 def translate_tag_signal(sender, instance, created, **kwargs):
+    from thingiverse.tasks import translate_tag
     if created:
         translate_tag.delay(instance.id)
 
@@ -161,6 +162,8 @@ class Objeto(models.Model):
     origin = models.CharField(choices=origenes,max_length=30,null=True)
     #Fueron descargados los STL? (y objetos relacionados con este)
     partial = models.BooleanField(default=False)
+    #Paso el filtro?
+    filter_passed = models.BooleanField(default=False)
 
     @property
     def main_image(self):
@@ -233,6 +236,7 @@ Modelos accesorios
 class ArchivoSTL(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     file = models.FileField(upload_to='stl/')
+    original_filename = models.CharField(max_length=300,null=True)
     object = models.ForeignKey(Objeto,blank=True,null=True,on_delete=models.CASCADE,related_name='files')
     #Tiempo de impresion en escala 1, en segundos
     printing_time_default = models.IntegerField(default=0)
