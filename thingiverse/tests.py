@@ -12,6 +12,7 @@ from thingiverse.models import *
 from django.core.files import File
 import time
 import os, subprocess
+from .filters.things_filter import *
 
 
 class ObjetoTest(APITransactionTestCase):
@@ -33,7 +34,7 @@ class ObjetoTest(APITransactionTestCase):
     def test_import_from_thingi_partial(self):
         t = time.time()
         url = reverse('thingiverse:import_from_thingi_url')
-        data = {'external_id': '763622', 'file_list' : [1223854],'partial': True}
+        data = {'external_id': '763622', 'file_list' : [1223854], 'partial': True, 'origin': 'human'}
         cuenta_de_objetos = Objeto.objects.count()
         #Enviamos la request
         response = self.client.post(url, data, format='json')
@@ -67,9 +68,19 @@ class ObjetoTest(APITransactionTestCase):
             response = self.client.get(url).json()['status']
             if response == "SUCCESS":
                 break
-            time.sleep(0.1)
+            time.sleep(2)
         self.assertEqual(len(objeto.files.all()), cantidad_inicial_de_archivos+2)
         print("Tiempo de importacion total de objeto: {}s".format(time.time()-t))
+
+    def test_objects_filter(self):
+        o = ObjetoThingi.objects.create_object(external_id=3024248)
+        while o.status != 'SUCCESS':
+            o.update_status()
+        obj = o.object_id
+        #Veamos ahora los resultados del filtro
+        self.assertTrue(obj.external_id.thingiverse_attributes.filter_passed)
+        #Asimismo, deberiamos habernos quedado con unicamente 3 archivos
+        self.assertTrue(len([o for o in obj.files.all() if o.informacionthingi.filter_passed == True]) == 3)
 
 class CategoriaThingiTest(APITransactionTestCase):
     allow_database_queries = True
@@ -81,4 +92,4 @@ class CategoriaThingiTest(APITransactionTestCase):
     def test_populate_categories(self):
         from populate import populate_categories
         populate_categories(request_from_thingi,settings,CategoriaThigi)
-        self.assertTrue(CategoriaThigi.objects.count()>2)
+        self.assertTrue(CategoriaThigi.objects.count() > 2)

@@ -162,8 +162,6 @@ class Objeto(models.Model):
     origin = models.CharField(choices=origenes,max_length=30,null=True)
     #Fueron descargados los STL? (y objetos relacionados con este)
     partial = models.BooleanField(default=False)
-    #Paso el filtro?
-    filter_passed = models.BooleanField(default=False)
 
     @property
     def main_image(self):
@@ -233,10 +231,10 @@ class Objeto(models.Model):
 '''
 Modelos accesorios
 '''
+
 class ArchivoSTL(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     file = models.FileField(upload_to='stl/')
-    original_filename = models.CharField(max_length=300,null=True)
     object = models.ForeignKey(Objeto,blank=True,null=True,on_delete=models.CASCADE,related_name='files')
     #Tiempo de impresion en escala 1, en segundos
     printing_time_default = models.IntegerField(default=0)

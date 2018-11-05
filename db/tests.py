@@ -9,7 +9,7 @@ from allauth.socialaccount.models import Site, SocialApp
 from django_mercadopago import models as MPModels
 from django.core.files import File
 import os, subprocess, time
-
+from django.contrib.auth.models import User
 
 class TestPurchase(APITransactionTestCase):
     allow_database_queries = True
@@ -31,9 +31,9 @@ class TestPurchase(APITransactionTestCase):
             objeto.update_status()
             time.sleep(1)
         self.assertTrue(Objeto.objects.count() > 0)
-        #Logueamos con el usuario admin
-        user = User.objects.first()
-        self.client.force_authenticate(user=user)
+        #Creamos el user que realizara la compra
+        u = User.objects.create(username='test',password='test123', email='test_user_88801944@testuser.com')
+        self.client.force_authenticate(user=u)
 
     def test_MP_purchase(self):
         url = reverse('db:place_order')

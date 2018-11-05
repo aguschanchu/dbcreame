@@ -4,6 +4,7 @@ from django.contrib.postgres.fields import ArrayField
 from celery.result import AsyncResult
 from db import models as modelos
 import datetime
+import trimesh
 import json
 import traceback
 
@@ -84,6 +85,7 @@ class ObjetoThingi(models.Model):
     celery_id = models.CharField(max_length=100,blank=True)
     object_id = models.ForeignKey('db.Objeto',null=True,on_delete=models.SET_NULL)
     partial = models.BooleanField(default=True)
+    origin = models.CharField(max_length=200,blank=True,null=True)
     update_object = models.BooleanField(default=False)
 
     objects = ObjetoThingiManager()
@@ -152,3 +154,59 @@ class AtributoExterno(models.Model):
     download_count = models.IntegerField(default=0)
     added = models.DateTimeField(default=timezone.now)
     original_file_count = models.IntegerField(default=0)
+    #Paso el filtro?
+    filter_passed = models.BooleanField(default=True)
+
+
+'''
+Extension de ArchivoSTL, que agrega informacion requerida para los filtros
+'''
+
+class InformacionThingi(models.Model):
+    file = models.OneToOneField('db.ArchivoSTL', on_delete=models.CASCADE, null=True)
+    original_filename = models.CharField(max_length=300)
+    date = models.DateTimeField(default=timezone.now,blank=True)
+    thingi_id = models.IntegerField(default=0)
+    #Paso el filtro?
+    filter_passed = models.NullBooleanField(default=None)
+
+
+'''
+Clase de informacion de Mesh. Se utiliza para el filtro de archivos de una thing, y extiende a esta clase
+'''
+
+class InformacionMesh(models.Model):
+    bounding_box_x = models.FloatField(default=0)
+    bounding_box_y = models.FloatField(default=0)
+    bounding_box_z = models.FloatField(default=0)
+    area = models.FloatField(default=0)
+    volume = models.FloatField(default=0)
+    is_watertight = models.BooleanField(default=False)
+    body_count = models.IntegerField(default=0)
+    file = models.OneToOneField('db.ArchivoSTL', on_delete=models.CASCADE, null=True)
+
+    @property
+    def bounding_box(self):
+        return [self.bounding_box_x, self.bounding_box_y, self.bounding_box_z]
+
+    @property
+    def fid(self):
+        return self.file.id
+
+    @staticmethod
+    def informacion_mesh_de_archivo_stl(archivo_stl: modelos.ArchivoSTL):
+        with archivo_stl.file.file as file:
+            mesh = trimesh.load_mesh(file.open(mode='rb'),file_type='stl')
+            file.close()
+        mesh_data = InformacionMesh()
+        mesh_data.bounding_box_x, mesh_data.bounding_box_y, mesh_data.bounding_box_z = mesh.bounding_box_oriented.primitive.extents
+        mesh_data.area = mesh.area
+        mesh_data.volume = mesh.volume
+        mesh_data.is_watertight = mesh.is_watertight
+        mesh_data.body_count = mesh.body_count
+        mesh_data.file = archivo_stl
+        mesh_data.save()
+
+        return mesh_data
+
+

@@ -89,6 +89,13 @@ def combine_stls_files(objeto):
             args_d = args.copy() + ['-x',str(build_plate_size),'-y',str(build_plate_size),'--spacing',str(10),'--outputdir',dir+'/']
             os.mkdir(dir)
             proc = subprocess.run(args_d,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE,cwd=dir+'/')
+            for line in proc.stdout.splitlines():
+                if 'Generating plate 0' in line:
+                    break
+            else:
+                print("Error al acomodar las piezas para el modelo sfb")
+                print(proc.stdout.splitlines())
+                print(proc.stderr.splitlines())
             return dir
 
 def combine_stl_with_correct_coordinates(objeto):

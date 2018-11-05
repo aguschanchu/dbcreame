@@ -14,10 +14,10 @@ def license_filter(thing: Objeto) -> bool:
 
 def image_filter(thing: Objeto) -> bool:
     if thing.main_image is None:
-        return False
+        raise ValueError('Image not ready')
     # Image size filter
-    height = thing.main_image.width
-    width = thing.main_image.height
+    height = thing.main_image.height
+    width = thing.main_image.width
     if abs(width / height - 4 / 3) > 1/3:
         return False
 
@@ -43,10 +43,10 @@ def likes_filter(thing: Objeto) -> bool:
     today = timezone.now()
     delta_time = today - attr.added
     if delta_time.days >= 30:
-        if attr.like_count <= 500 or attr.download_count <= 500:
+        if attr.like_count <= 200 or attr.download_count <= 20:
             return False
     elif 10 <= delta_time.days < 30:
-        if attr.like_count <= 100 or attr.download_count <= 100:
+        if attr.like_count <= 50 or attr.download_count <= 50:
             return False
     elif delta_time.days < 10:
         if attr.like_count <= 10 or attr.download_count <= 20:
@@ -82,7 +82,7 @@ def keyword_filter(thing: Objeto) -> bool:
         return False  # Filter by the description
     unwanted_tags = list(filter(
         lambda tag: any(word in tag.name.lower() for word in unwanted_words),
-        [t.name for t in thing.tags.all()])
+        [t for t in thing.tags.all()])
     )
     if len(unwanted_tags) is not 0:
         return False  # Filter by the tags

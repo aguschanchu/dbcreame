@@ -5,16 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f8994a3d-efb2-47cb-acaf-e422e7d06e09" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/thingiverse/filters/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/thingiverse/filters/geometry_filter.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/thingiverse/filters/text_filer.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/thingiverse/filters/things_files_filter.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dbcreame.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dbcreame.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/db/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/db/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/db/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/db/serializers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/simarrange/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/lib/simarrange/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/populate.py" beforeDir="false" afterPath="$PROJECT_DIR$/populate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/db/tests.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/tools/stl_to_sfb.py" beforeDir="false" afterPath="$PROJECT_DIR$/db/tools/stl_to_sfb.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/thingiverse/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/thingiverse/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/thingiverse/tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/thingiverse/tasks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/thingiverse/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/thingiverse/tests.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/thingiverse/things_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/thingiverse/filters/things_filter.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -37,19 +41,22 @@
     <select />
   </component>
   <component name="DjangoConsoleOptions" custom-start-script="import sys; print('Python %s on %s' % (sys.version, sys.platform))&#10;import django; print('Django %s' % django.get_version())&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;if 'setup' in dir(django): django.setup()&#10;import django_manage_shell; django_manage_shell.run(PROJECT_ROOT)">
+    <option name="useSoftWraps" value="true" />
     <option name="myCustomStartScript" value="import sys; print('Python %s on %s' % (sys.version, sys.platform))&#10;import django; print('Django %s' % django.get_version())&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;if 'setup' in dir(django): django.setup()&#10;import django_manage_shell; django_manage_shell.run(PROJECT_ROOT)" />
   </component>
   <component name="FUSProjectUsageTrigger">
     <session id="1510214541">
       <usages-collector id="statistics.lifecycle.project">
         <counts>
-          <entry key="project.closed" value="4" />
+          <entry key="project.closed" value="6" />
           <entry key="project.open.time.0" value="1" />
-          <entry key="project.open.time.2" value="1" />
+          <entry key="project.open.time.1" value="1" />
+          <entry key="project.open.time.2" value="2" />
           <entry key="project.open.time.4" value="1" />
           <entry key="project.open.time.5" value="2" />
-          <entry key="project.open.time.6" value="1" />
-          <entry key="project.opened" value="6" />
+          <entry key="project.open.time.6" value="2" />
+          <entry key="project.open.time.7" value="1" />
+          <entry key="project.opened" value="10" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
@@ -57,7 +64,8 @@
           <entry key="Makefile" value="1" />
           <entry key="gitignore" value="1" />
           <entry key="iml" value="1" />
-          <entry key="py" value="20" />
+          <entry key="json" value="1" />
+          <entry key="py" value="43" />
           <entry key="sh" value="1" />
           <entry key="txt" value="1" />
           <entry key="xml" value="2" />
@@ -66,22 +74,23 @@
       <usages-collector id="statistics.file.types.open">
         <counts>
           <entry key="IDEA_MODULE" value="1" />
+          <entry key="JSON" value="1" />
           <entry key="PLAIN_TEXT" value="4" />
-          <entry key="Python" value="20" />
+          <entry key="Python" value="43" />
           <entry key="XML" value="2" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="Django Console" value="1" />
-          <entry key="py" value="1643" />
-          <entry key="txt" value="43" />
+          <entry key="Django Console" value="2829" />
+          <entry key="py" value="8441" />
+          <entry key="txt" value="68" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="PLAIN_TEXT" value="43" />
-          <entry key="Python" value="1644" />
+          <entry key="PLAIN_TEXT" value="68" />
+          <entry key="Python" value="11270" />
         </counts>
       </usages-collector>
     </session>
@@ -92,15 +101,10 @@
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/.idea/misc.xml">
-          <provider selected="true" editor-type-id="text-editor" />
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/thingiverse/tasks.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3458">
-              <caret line="194" column="49" selection-start-line="194" selection-start-column="49" selection-end-line="194" selection-end-column="49" />
+            <state relative-caret-position="504">
+              <caret line="452" column="31" selection-start-line="452" selection-start-column="31" selection-end-line="452" selection-end-column="31" />
               <folding>
                 <element signature="e#0#56#0" expanded="true" />
               </folding>
@@ -109,71 +113,35 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/thingiverse/models.py">
+        <entry file="file://$PROJECT_DIR$/vision/tests.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-679">
+              <folding>
+                <element signature="e#0#31#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/db/tasks.py">
           <provider selected="true" editor-type-id="text-editor">
             <state>
               <folding>
-                <element signature="e#0#28#0" expanded="true" />
+                <element signature="e#0#38#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/db/models.py">
+        <entry file="file://$PROJECT_DIR$/db/tests.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="247">
-              <caret line="147" selection-start-line="147" selection-end-line="147" />
+            <state relative-caret-position="44">
+              <caret line="14" column="33" selection-start-line="14" selection-start-column="33" selection-end-line="14" selection-end-column="33" />
               <folding>
-                <element signature="e#0#28#0" expanded="true" />
-                <marker date="1540776270581" expanded="true" signature="6083:6383" ph="..." />
+                <element signature="e#0#31#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/thingiverse/serializers.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state>
-              <folding>
-                <element signature="e#0#38#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/db/views.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="205">
-              <caret line="42" column="39" selection-start-line="42" selection-start-column="33" selection-end-line="42" selection-end-column="39" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/db/serializers.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-2043">
-              <caret line="44" lean-forward="true" selection-start-line="44" selection-end-line="44" />
-              <folding>
-                <element signature="e#0#38#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/.gitignore">
-          <provider selected="true" editor-type-id="text-editor" />
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/.idea/dbcreame.iml">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="399">
-              <caret line="21" column="14" selection-start-line="21" selection-start-column="14" selection-end-line="21" selection-end-column="14" />
             </state>
           </provider>
         </entry>
@@ -181,28 +149,117 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/populate.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="205">
-              <caret line="22" column="77" selection-start-line="22" selection-start-column="74" selection-end-line="22" selection-end-column="77" />
+            <state relative-caret-position="133">
+              <caret line="133" column="32" selection-start-line="133" selection-start-column="4" selection-end-line="133" selection-end-column="47" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/thingiverse/models.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="462">
+              <caret line="170" column="56" selection-start-line="170" selection-start-column="56" selection-end-line="170" selection-end-column="56" />
+              <folding>
+                <element signature="e#0#28#0" expanded="true" />
+                <marker date="1541207539188" expanded="true" signature="6095:6432" ph="..." />
+                <marker date="1541207539188" expanded="true" signature="6583:6588" ph="..." />
+                <marker date="1541207539188" expanded="true" signature="7188:7194" ph="..." />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/thingiverse/tests.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="366">
+              <caret line="80" selection-start-line="80" selection-end-line="80" />
+              <folding>
+                <element signature="e#0#31#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/thingiverse/filters/geometry_filter.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="100">
+              <caret line="161" column="39" selection-start-line="161" selection-start-column="39" selection-end-line="161" selection-end-column="39" />
+              <folding>
+                <element signature="e#0#11#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/thingiverse/filters/text_filer.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="247">
+              <caret line="13" column="25" selection-start-line="13" selection-start-column="25" selection-end-line="13" selection-end-column="25" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/thingiverse/filters/things_files_filter.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="209">
+              <caret line="11" column="23" selection-start-line="11" selection-start-column="23" selection-end-line="11" selection-end-column="23" />
+              <folding>
+                <element signature="e#0#24#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
       </file>
     </leaf>
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>UserSer</find>
-      <find>Direc</find>
-      <find>Usuario</find>
-      <find>related</find>
-      <find>UserIn</find>
-      <find>Direcci</find>
-      <find>UsuarioSer</find>
-      <find>ren</find>
-      <find>filter</find>
-      <find>images</find>
       <find>min</find>
+      <find>referenciaexter</find>
+      <find>timezone</find>
+      <find>download_</find>
+      <find>link</find>
+      <find>thing</find>
+      <find>translate</find>
+      <find>download_file</find>
+      <find>Objeto</find>
+      <find>tasks</find>
+      <find>categor</find>
+      <find>OneToOn</find>
+      <find>Archivo</find>
+      <find>ArchivoS</find>
+      <find>id</find>
+      <find>reduce_graph</find>
+      <find>STL</find>
+      <find>download_fi</find>
+      <find>filter_file_things</find>
+      <find>Infor</find>
+      <find>ArchivoSTL</find>
+      <find>datetime</find>
+      <find>ValueErr</find>
+      <find>origin</find>
+      <find>filter_passed</find>
+      <find>update_fi</find>
+      <find>apply_thing_filterapply_thing_filter</find>
+      <find>apply_thing_filter</find>
+      <find>date</find>
+      <find>update</find>
     </findStrings>
+    <replaceStrings>
+      <replace />
+    </replaceStrings>
   </component>
   <component name="Git.Settings">
     <option name="ROOT_SYNC" value="DONT_SYNC" />
@@ -215,10 +272,20 @@
         <option value="$PROJECT_DIR$/db/views.py" />
         <option value="$PROJECT_DIR$/db/admin.py" />
         <option value="$PROJECT_DIR$/requirements.txt" />
-        <option value="$PROJECT_DIR$/populate.py" />
-        <option value="$PROJECT_DIR$/thingiverse/tasks.py" />
         <option value="$PROJECT_DIR$/db/serializers.py" />
+        <option value="$PROJECT_DIR$/google_credentials.json" />
+        <option value="$PROJECT_DIR$/thingiverse/things_filter.py" />
+        <option value="$PROJECT_DIR$/populate.py" />
         <option value="$PROJECT_DIR$/db/models.py" />
+        <option value="$PROJECT_DIR$/thingiverse/filters/things_files_filter.py" />
+        <option value="$PROJECT_DIR$/thingiverse/filters/text_filer.py" />
+        <option value="$PROJECT_DIR$/thingiverse/filters/things_filter.py" />
+        <option value="$PROJECT_DIR$/thingiverse/models.py" />
+        <option value="$PROJECT_DIR$/db/tools/stl_to_sfb.py" />
+        <option value="$PROJECT_DIR$/thingiverse/filters/geometry_filter.py" />
+        <option value="$PROJECT_DIR$/thingiverse/tasks.py" />
+        <option value="$PROJECT_DIR$/thingiverse/tests.py" />
+        <option value="$PROJECT_DIR$/db/tests.py" />
       </list>
     </option>
   </component>
@@ -229,10 +296,8 @@
     <sorting>DEFINITION_ORDER</sorting>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="64" />
-    <option name="y" value="27" />
-    <option name="width" value="1263" />
-    <option name="height" value="780" />
+    <option name="width" value="1920" />
+    <option name="height" value="1080" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -251,12 +316,52 @@
       </profile-state>
     </entry>
   </component>
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="dbcreame" type="b2602c69:ProjectViewProjectNode" />
+              <item name="dbcreame" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="dbcreame" type="b2602c69:ProjectViewProjectNode" />
+              <item name="dbcreame" type="462c0819:PsiDirectoryNode" />
+              <item name="db" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="dbcreame" type="b2602c69:ProjectViewProjectNode" />
+              <item name="dbcreame" type="462c0819:PsiDirectoryNode" />
+              <item name="db" type="462c0819:PsiDirectoryNode" />
+              <item name="tools" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="dbcreame" type="b2602c69:ProjectViewProjectNode" />
+              <item name="dbcreame" type="462c0819:PsiDirectoryNode" />
+              <item name="thingiverse" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="dbcreame" type="b2602c69:ProjectViewProjectNode" />
+              <item name="dbcreame" type="462c0819:PsiDirectoryNode" />
+              <item name="thingiverse" type="462c0819:PsiDirectoryNode" />
+              <item name="filters" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="dbcreame" type="b2602c69:ProjectViewProjectNode" />
+              <item name="dbcreame" type="462c0819:PsiDirectoryNode" />
+              <item name="vision" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
       <pane id="Scope">
         <subPane subId="Scope 'Changed Files'; set:Changed Files; ALL; class com.intellij.packageDependencies.ChangeListScope">
           <expand>
@@ -284,33 +389,17 @@
           <select />
         </subPane>
       </pane>
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="dbcreame" type="b2602c69:ProjectViewProjectNode" />
-              <item name="dbcreame" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dbcreame" type="b2602c69:ProjectViewProjectNode" />
-              <item name="dbcreame" type="462c0819:PsiDirectoryNode" />
-              <item name="db" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dbcreame" type="b2602c69:ProjectViewProjectNode" />
-              <item name="dbcreame" type="462c0819:PsiDirectoryNode" />
-              <item name="thingiverse" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
     </panes>
   </component>
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../thingiverse-parser" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/thingiverse/filters" />
+    </key>
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -361,6 +450,14 @@
       <option name="presentableId" value="Default" />
       <updated>1536428102538</updated>
     </task>
+    <task id="LOCAL-00001" summary="Things filter integration">
+      <created>1541027643672</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1541027643672</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TodoView">
@@ -373,32 +470,56 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="27" width="1920" height="1053" extended-state="6" />
+    <frame x="0" y="0" width="1920" height="1080" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.498366" visible="true" weight="0.19123931" />
-      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info id="Favorites" order="2" sideWeight="0.501634" side_tool="true" weight="0.18910256" />
-      <window_info anchor="bottom" id="Messages" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49781182" visible="true" weight="0.18904404" />
+      <window_info id="Structure" order="1" sideWeight="0.5021882" side_tool="true" weight="0.19656284" />
+      <window_info id="Favorites" order="2" sideWeight="0.5021882" side_tool="true" weight="0.19656284" />
       <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49946582" weight="0.22941822" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.32932165" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49946582" weight="0.18708971" />
       <window_info anchor="bottom" id="Debug" order="3" sideWeight="0.49946582" weight="0.39846322" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" weight="0.32930845" />
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Version Control" order="8" visible="true" weight="0.32930845" />
+      <window_info anchor="bottom" id="Version Control" order="8" weight="0.32932165" />
       <window_info anchor="bottom" id="Database Changes" order="9" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.5005342" side_tool="true" weight="0.39846322" />
-      <window_info anchor="bottom" id="Terminal" order="11" weight="0.24149287" />
-      <window_info anchor="bottom" id="Python Console" order="12" weight="0.32930845" />
+      <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.50053704" side_tool="true" weight="0.24070022" />
+      <window_info anchor="bottom" id="Terminal" order="11" sideWeight="0.49946293" weight="0.2045952" />
+      <window_info active="true" anchor="bottom" id="Python Console" order="12" sideWeight="0.49946293" visible="true" weight="0.2177243" />
+      <window_info anchor="bottom" id="Messages" order="13" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="SciView" order="3" weight="0.32921588" />
+      <window_info anchor="right" id="Database" order="4" weight="0.32959402" />
+    </layout>
+    <layout-to-restore>
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.49781182" visible="true" weight="0.19924812" />
+      <window_info id="Structure" order="1" sideWeight="0.5021882" side_tool="true" weight="0.19656284" />
+      <window_info id="Favorites" order="2" sideWeight="0.5021882" side_tool="true" weight="0.19656284" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.32932165" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49946582" weight="0.18708971" />
+      <window_info anchor="bottom" id="Debug" order="3" sideWeight="0.49946582" weight="0.39846322" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.32930845" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Version Control" order="8" weight="0.32932165" />
+      <window_info anchor="bottom" id="Database Changes" order="9" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.50053704" side_tool="true" weight="0.24070022" />
+      <window_info anchor="bottom" id="Terminal" order="11" sideWeight="0.49946293" weight="0.40153173" />
+      <window_info anchor="bottom" id="Python Console" order="12" sideWeight="0.49946293" visible="true" weight="0.24617068" />
+      <window_info anchor="bottom" id="Messages" order="13" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
       <window_info anchor="right" id="SciView" order="3" weight="0.32959402" />
       <window_info anchor="right" id="Database" order="4" weight="0.32959402" />
-    </layout>
+    </layout-to-restore>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
@@ -432,35 +553,15 @@
   <component name="VcsContentAnnotationSettings">
     <option name="myLimit" value="2678400000" />
   </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Things filter integration" />
+    <option name="LAST_COMMIT_MESSAGE" value="Things filter integration" />
+  </component>
   <component name="editorHistoryManager">
-    <entry file="file://$USER_HOME$/anaconda3/envs/dbcreame/lib/python3.6/site-packages/django/db/models/base.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2195">
-          <caret line="304" selection-start-line="304" selection-end-line="304" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/anaconda3/envs/dbcreame/lib/python3.6/site-packages/django/db/backends/postgresql/base.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="195">
-          <caret line="23" selection-start-line="23" selection-end-line="23" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/anaconda3/envs/dbcreame/lib/python3.6/site-packages/rest_framework/serializers.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="293">
-          <caret line="904" column="8" selection-start-line="904" selection-start-column="8" selection-end-line="904" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/anaconda3/envs/dbcreame/lib/python3.6/site-packages/psycopg2/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="648">
-          <caret line="143" selection-start-line="143" selection-end-line="143" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$USER_HOME$/anaconda3/envs/dbcreame/lib/python3.6/site-packages/django/db/models/base.py" />
+    <entry file="file://$USER_HOME$/anaconda3/envs/dbcreame/lib/python3.6/site-packages/django/db/backends/postgresql/base.py" />
+    <entry file="file://$USER_HOME$/anaconda3/envs/dbcreame/lib/python3.6/site-packages/rest_framework/serializers.py" />
+    <entry file="file://$USER_HOME$/anaconda3/envs/dbcreame/lib/python3.6/site-packages/psycopg2/__init__.py" />
     <entry file="file://$PROJECT_DIR$/db/urls.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="513">
@@ -479,9 +580,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1596">
           <caret line="87" column="29" selection-start-line="87" selection-start-column="29" selection-end-line="87" selection-end-column="29" />
-          <folding>
-            <element signature="e#0#32#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -489,9 +587,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="361">
           <caret line="22" selection-start-line="22" selection-end-line="22" />
-          <folding>
-            <element signature="e#0#56#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -528,6 +623,15 @@
     <entry file="file://$PROJECT_DIR$/.idea/misc.xml">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
+    <entry file="file://$PROJECT_DIR$/thingiverse/import_from_thingi.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <folding>
+            <element signature="e#0#32#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/.gitignore">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -538,23 +642,153 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/db/views.py">
+    <entry file="file://$PROJECT_DIR$/vision/models.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="205">
-          <caret line="42" column="39" selection-start-line="42" selection-start-column="33" selection-end-line="42" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/thingiverse/models.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
+        <state relative-caret-position="228">
+          <caret line="12" column="57" lean-forward="true" selection-start-line="12" selection-start-column="57" selection-end-line="12" selection-end-column="57" />
           <folding>
             <element signature="e#0#28#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/google_credentials.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="209">
+          <caret line="11" column="1" selection-start-line="11" selection-start-column="1" selection-end-line="11" selection-end-column="1" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thingiverse/__init__.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vision/tasks.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/db/views.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="361">
+          <caret line="42" column="39" selection-start-line="42" selection-start-column="33" selection-end-line="42" selection-end-column="39" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thingiverse/views.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-114" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/db/serializers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="513">
+          <caret line="44" selection-start-line="44" selection-end-line="44" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/db/models.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4085">
+          <caret line="239" column="4" selection-start-line="239" selection-start-column="4" selection-end-line="239" selection-end-column="25" />
+          <folding>
+            <element signature="e#0#28#0" expanded="true" />
+            <marker date="1541185902092" expanded="true" signature="4202:4204" ph="..." />
+            <marker date="1541185902092" expanded="true" signature="9657:9659" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/db/tools/stl_to_sfb.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1577">
+          <caret line="92" column="38" selection-start-line="92" selection-start-column="38" selection-end-line="92" selection-end-column="38" />
+          <folding>
+            <element signature="e#0#17#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/thingiverse/serializers.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thingiverse/filters/things_filter.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="293">
+          <caret line="16" column="41" selection-start-line="16" selection-start-column="41" selection-end-line="16" selection-end-column="41" />
+          <folding>
+            <element signature="e#0#33#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thingiverse/filters/things_files_filter.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="209">
+          <caret line="11" column="23" selection-start-line="11" selection-start-column="23" selection-end-line="11" selection-end-column="23" />
+          <folding>
+            <element signature="e#0#24#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thingiverse/filters/text_filer.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="247">
+          <caret line="13" column="25" selection-start-line="13" selection-start-column="25" selection-end-line="13" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thingiverse/filters/geometry_filter.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="100">
+          <caret line="161" column="39" selection-start-line="161" selection-start-column="39" selection-end-line="161" selection-end-column="39" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thingiverse/models.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="462">
+          <caret line="170" column="56" selection-start-line="170" selection-start-column="56" selection-end-line="170" selection-end-column="56" />
+          <folding>
+            <element signature="e#0#28#0" expanded="true" />
+            <marker date="1541207539188" expanded="true" signature="6095:6432" ph="..." />
+            <marker date="1541207539188" expanded="true" signature="6583:6588" ph="..." />
+            <marker date="1541207539188" expanded="true" signature="7188:7194" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thingiverse/tests.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="366">
+          <caret line="80" selection-start-line="80" selection-end-line="80" />
+          <folding>
+            <element signature="e#0#31#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thingiverse/tasks.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="504">
+          <caret line="452" column="31" selection-start-line="452" selection-start-column="31" selection-end-line="452" selection-end-column="31" />
+          <folding>
+            <element signature="e#0#56#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vision/tests.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-679">
+          <folding>
+            <element signature="e#0#31#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/db/tasks.py">
       <provider selected="true" editor-type-id="text-editor">
         <state>
           <folding>
@@ -565,38 +799,17 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/populate.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="205">
-          <caret line="22" column="77" selection-start-line="22" selection-start-column="74" selection-end-line="22" selection-end-column="77" />
+        <state relative-caret-position="133">
+          <caret line="133" column="32" selection-start-line="133" selection-start-column="4" selection-end-line="133" selection-end-column="47" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/db/serializers.py">
+    <entry file="file://$PROJECT_DIR$/db/tests.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-2043">
-          <caret line="44" lean-forward="true" selection-start-line="44" selection-end-line="44" />
+        <state relative-caret-position="44">
+          <caret line="14" column="33" selection-start-line="14" selection-start-column="33" selection-end-line="14" selection-end-column="33" />
           <folding>
-            <element signature="e#0#38#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/thingiverse/tasks.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3458">
-          <caret line="194" column="49" selection-start-line="194" selection-start-column="49" selection-end-line="194" selection-end-column="49" />
-          <folding>
-            <element signature="e#0#56#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/db/models.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="247">
-          <caret line="147" selection-start-line="147" selection-end-line="147" />
-          <folding>
-            <element signature="e#0#28#0" expanded="true" />
-            <marker date="1540776270581" expanded="true" signature="6083:6383" ph="..." />
+            <element signature="e#0#31#0" expanded="true" />
           </folding>
         </state>
       </provider>

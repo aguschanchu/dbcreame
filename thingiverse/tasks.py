@@ -1,14 +1,9 @@
 from __future__ import absolute_import, unicode_literals
-from celery import shared_task, chord, group
-from db import models as modelos
-from django.db import models
+from celery import shared_task, group
 from .models import *
-import datetime
 import os
 import requests
 import random, string
-from django.core.exceptions import ValidationError
-from django.utils.translation import gettext_lazy as _
 from django.core.files import File
 import time
 from urllib.parse import urlparse, quote
@@ -21,11 +16,12 @@ from urllib3 import PoolManager
 from urllib3.exceptions import MaxRetryError
 import pickle
 urllib3.disable_warnings()
-from google.cloud import translate
 from celery.task import control
 from celery.exceptions import SoftTimeLimitExceeded
 import dateutil.parser
-from thingiverse.things_filter import complete_filter_func
+from .filters.things_filter import *
+from .filters.things_files_filter import thing_files_filter
+
 
 @shared_task(autoretry_for=(TypeError,ValueError,MaxRetryError), retry_backoff=True, max_retries=50)
 def request_from_thingi(url,content=False,params=''):
@@ -79,17 +75,17 @@ def get_thing_categories_list(thingiid):
     return result
 
 @shared_task(autoretry_for=(TypeError,ValueError,MaxRetryError), retry_backoff=True, max_retries=50)
-def download_file(url, name = ''):
+def download_file(url, thingiid = None):
     http = PoolManager(retries=Retry(total=2, backoff_factor=0.1, status_forcelist=list(range(400,501))))
-    path = 'tmp/'+''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + name
+    path = 'tmp/'+''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + '.stl'
     try:
         with open(path,'wb') as file:
             file.write(http.request('GET', url).data)
     except:
         print("Error al descargar imagen")
         raise ValueError
-    if name != '':
-        return (path, name)
+    if thingiid != None:
+        return (path, thingiid)
     else:
         return path
 
@@ -126,6 +122,7 @@ def add_object_from_thingiverse_chain(thingiid, file_list = None, debug = True, 
     #Creacion de objeto a partir de informacion descargada
     res |= add_object.s(thingiid, partial, debug, origin)
     res |= download_images_task_group.s(partial)
+    res |= apply_thing_filter.s()
     if not partial:
         res |= add_files_to_thingiverse_object.s(file_list)
     return res
@@ -169,8 +166,8 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
     categorias = []
     ### Veamos que categorias existen, en la DB. Las que no, las creamos.
     for cat in r['categories']:
-
         categorias.append(modelos.Categoria.objects.get_or_create(name=cat)[0])
+
     ## Tags
     tags = []
     ### Veamos que categorias existen, en la DB. Las que no, las creamos.
@@ -194,13 +191,6 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
         objeto.category.add(categoria)
     for tag in tags:
         objeto.tags.add(tag)
-
-    ### Ya con todos los datos, pasamos la thing por el filtro
-    if 'origin' != 'human':
-        objeto.filter_passed = complete_filter_func(objeto)
-    else:
-        objeto.filter_passed = True
-    objeto.save(update_fields=['filter_passed'])
 
     return (objeto.id, [j['sizes'][12]['url'] for j in r['img']])
 
@@ -230,6 +220,40 @@ def download_image(objeto_id, url, main):
     imagen.object = objeto
     imagen.save()
 
+@shared_task(autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
+def apply_thing_filter(object_id):
+    objeto = modelos.Objeto.objects.get(pk=object_id[0])
+    extattr = objeto.external_id.thingiverse_attributes
+
+    thing = objeto
+    if not license_filter(thing):
+        print(1)
+    if not image_filter(thing):
+        print(2)
+    if not category_filter(thing):
+        print(3)
+    if not likes_filter(thing):
+        print(4)
+    if not nsfw_filter(thing):
+        print(5)
+    if not keyword_filter(thing):
+        print(6)
+    if not thing_files_filter(thing):
+        print(7)
+
+    ### Ya con todos los datos, pasamos la thing por el filtro
+    if objeto.origin != 'human':
+        extattr.filter_passed = complete_filter_func(objeto)
+        print('Resultado del filtro: {}'.format(extattr.filter_passed))
+        if not extattr.filter_passed:
+            objeto.hidden = True
+            objeto.save(update_fields=['hidden'])
+    else:
+        extattr.filter_passed = True
+
+    extattr.save(update_fields=['filter_passed'])
+
+    return object_id
 
 @shared_task(bind=True,autoretry_for=(TypeError,ValueError,MaxRetryError,ConnectionResetError), retry_backoff=True, max_retries=50)
 def add_files_to_thingiverse_object(self, object_id, file_list = None, override = False, debug = True):
@@ -281,7 +305,7 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
                         name = thing_file['name']
                         if any(s in name.lower() for s in allowed_extensions):
                             download_url = thing_file['download_url']
-                            st = download_file.delay(download_url+'?access_token='+ApiKey.get_api_key(),name=name)
+                            st = download_file.delay(download_url+'?access_token='+ApiKey.get_api_key(), thingiid = thing_file['id'])
                             ObjetoThingiSubtask.objects.create(parent_task=task, celery_id=st.id)
             else:
                 raise self.retry(countdown=5)
@@ -291,6 +315,7 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
         if task.update_subtask_status() == False:
             raise self.retry(countdown=5)
             return False
+
         ### Ok, termino. Agregamos los archivos al objeto, y continuamos
         archivos_link = task.update_subtask_status()
         archivos = []
@@ -299,13 +324,24 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
                 with open(link[0],'rb') as file:
                     archivo = modelos.ArchivoSTL()
                     archivo.file.save(objeto.external_id.repository+'-'+str(objeto.external_id.external_id)+'.stl',File(file))
-                    archivo.original_filename = link[1]
-                    archivo.save(update_fields=['original_filename'])
+
+                    #Guardamos los campos adicionales que requiere el filtro
+                    info = InformacionThingi()
+                    for f in rfiles:
+                        if f['id'] == link[1]:
+                            info.original_filename = f['name']
+                            info.date = dateutil.parser.parse(f['date'])
+                            info.thingi_id = link[1]
+                            info.file = archivo
+                            info.save()
+                            break
+
                     archivos.append(archivo)
                     os.remove(link[0])
                     task.remove_subtask_by_result(link)
             except:
                 print(link)
+                traceback.print_exc()
                 raise ValueError
         try:
             ### Tenemos los archivos descargados. Necesitamos completar su tiempo de imp, peso, dimensiones
@@ -399,6 +435,16 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
             if len(archivos) == 0:
                 objeto.delete()
                 return False
+
+            #Aplicamos el filtro de archivos
+            if objeto.origin != 'human':
+                thing_files_filter(objeto)
+                ## Borramos los archivos que no pasaron el filtro
+                for f in objeto.files.all():
+                    if f.informacionthingi.filter_passed == False:
+                        #f.delete()
+                        f.object = None
+                        f.save(update_fields=['object'])
 
             modelo_ar = modelos.ModeloAR()
             modelo_ar.object = objeto
