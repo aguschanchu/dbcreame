@@ -15,7 +15,7 @@ import shutil
 import trimesh
 import googlemaps
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, m2m_changed
 from django.dispatch import receiver
 from django.conf import settings
 from google.cloud import translate
@@ -406,6 +406,21 @@ def create_user_profile(sender, instance, created, **kwargs):
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     instance.usuario.save()
+
+@receiver(m2m_changed, sender=Usuario.liked_objects.through)
+def update_object_like_count(sender, **kwargs):
+    print('task')
+    pk_set = kwargs.pop('pk_set', None)
+    for oid in pk_set:
+        try:
+            obj = Objeto.objects.get(pk=oid)
+        except Objeto.DoesNotExist:
+            return False
+        obj.like_count = obj.usuario_set.count()
+        obj.save(update_fields=['like_count'])
+        return True
+
+
 
 class DireccionDeEnvio(models.Model):
     #Corresponde al place_id de gmaps
