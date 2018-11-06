@@ -26,7 +26,7 @@ from .filters.things_files_filter import thing_files_filter
 @shared_task(autoretry_for=(TypeError,ValueError,MaxRetryError), retry_backoff=True, max_retries=50)
 def request_from_thingi(url,content=False,params=''):
     endpoint = settings.THINGIVERSE_API_ENDPOINT
-    http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501)))
+    http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501))),
                        )
     for _ in range(0,60):
         k = ApiKey.get_api_key()

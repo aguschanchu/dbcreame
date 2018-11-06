@@ -19,9 +19,10 @@ class ObjetoTest(APITransactionTestCase):
     allow_database_queries = True
 
     def setUp(self):
-        from populate import thingiverse_apikeys_setup, superuser_setup
+        from populate import thingiverse_apikeys_setup, superuser_setup, populate_categories
         superuser_setup(User)
         thingiverse_apikeys_setup(ApiKey)
+        populate_categories(request_from_thingi,settings,CategoriaThigi)
         #Fueron importadas correctamente las API Keys?
         self.assertTrue(ApiKey.objects.count() > 0)
         print(ApiKey.objects.count())
@@ -61,5 +62,5 @@ class ObjetoTest(APITransactionTestCase):
             response = self.client.get(url).json()['status']
             if response == "SUCCESS":
                 break
-            time.sleep(0.1)
+            time.sleep(1)
         self.assertTrue(len(objeto.files.all())>cantidad_inicial_de_archivos)
