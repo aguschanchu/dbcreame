@@ -24,11 +24,12 @@ class ObjetoTest(APITransactionTestCase):
         thingiverse_apikeys_setup(ApiKey)
         #Fueron importadas correctamente las API Keys?
         self.assertTrue(ApiKey.objects.count() > 0)
+        print(ApiKey.objects.count())
 
     def test_vision_expierence(self):
         url = reverse('vision:post_url')
         #Preparamos imagen a postear
-        with open(settings.BASE_DIR + '/static/tests/teapot.jpeg','rb') as file:
+        with open(settings.BASE_DIR + '/static/tests/elephant.jpeg','rb') as file:
             image = File(file)
             data = {'image' : image}
             #Enviamos la request

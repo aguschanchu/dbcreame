@@ -17,11 +17,28 @@ class ImagenVisionAPI(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     image = models.ImageField(upload_to='images/visionapi/')
     celery_id = models.CharField(max_length=100,blank=True,null=True)
-    search_results = models.ManyToManyField('db.Objeto',blank=True)
-    subtasks = models.ManyToManyField('thingiverse.ObjetoThingi',blank=True)
     status = models.CharField(max_length=50,blank=True,null=True)
 
     objects = ImagenVisionAPIManager()
+
+    @property
+    def search_results(self):
+        self.filter_duplicates()
+        return self.search_result.all().filter(object__isnull=False)
+
+    def filter_duplicates(self):
+        #Hay duplicados? (SQL nos va decir mas rapido)
+        if self.search_result.all().filter(object__isnull=False).count() == self.search_result.all().filter(object__isnull=False).values_list('object',flat=True).distinct().count():
+            print("No hay duplicados")
+            return True
+        unique_ids = []
+        for o in self.search_result.all().filter(object__isnull=False):
+            if o.object.id in unique_ids:
+                o.delete()
+            else:
+                unique_ids.append(o.object.id)
+
+
 
     def update_status(self):
         res = AsyncResult(self.celery_id)
@@ -29,16 +46,46 @@ class ImagenVisionAPI(models.Model):
         if not res.ready():
             return False
         #OK, si. Tiene alguna subtarea pendiente? De ser asi, actualizamos el estado de las mismas
-        for s in self.subtasks.all():
-            s.update_status()
-            if not s.status == 'SUCCESS':
+        for s in self.search_result.all():
+            if not s.ready():
                 return False
-            else:
-                #Oh, que bueno, una subtarea que termino. Agregamos el resultado a search_results
-                self.search_results.add(s.object_id)
         else:
             self.status = 'SUCCESS'
             self.save(update_fields=['status'])
+
+
+class ImagenVisionApiResult(models.Model):
+    search = models.ForeignKey(ImagenVisionAPI, on_delete=models.CASCADE, related_name='search_result')
+    label_score = models.FloatField(default=0)
+    score = models.FloatField(default=0)
+    object = models.ForeignKey('db.Objeto', blank=True, on_delete=models.CASCADE, null=True)
+    subtask = models.ForeignKey('thingiverse.ObjetoThingi', null=True, on_delete=models.CASCADE)
+
+    def update_score(self):
+        self.score = self.object.score * self.label_score**20 if self.object != None else 0
+        self.save(update_fields=['score'])
+
+    def ready(self):
+        if self.object != None or self.subtask == None:
+            if self.score == 0:
+                self.update_score()
+            return True
+        self.subtask.update_status()
+        if self.subtask.status == 'SUCCESS':
+            #Termino la subtarea, actualizamos el object linkeado
+            self.object = self.subtask.object_id
+            #Paso el filtro este objeto?
+            if not self.object.external_id.thingiverse_attributes.filter_passed:
+                self.subtask = None
+                self.object = None
+            self.save()
+            self.update_score()
+            return True
+        elif self.subtask.status == 'FAILURE':
+            self.delete()
+            return False
+        else:
+            return False
 
 class TagSearchResult(models.Model):
     tag = models.CharField(max_length=100)

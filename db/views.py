@@ -40,7 +40,7 @@ class CategoryView(generics.ListAPIView):
 
     def get_queryset(self):
         category = self.kwargs.get(self.lookup_url_kwarg)
-        objetos = Objeto.objects.filter(category__name=category,origin='human')
+        objetos = Objeto.objects.filter(category__name=category, origin='human', hidden=False)
         return objetos
 
 class TagView(generics.ListAPIView):

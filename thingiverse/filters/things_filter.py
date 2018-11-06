@@ -18,7 +18,7 @@ def image_filter(thing: Objeto) -> bool:
     # Image size filter
     height = thing.main_image.height
     width = thing.main_image.width
-    if abs(width / height - 4 / 3) > 1/3:
+    if abs(width / height - 4 / 3) > 1/2:
         return False
 
     return True
@@ -43,13 +43,13 @@ def likes_filter(thing: Objeto) -> bool:
     today = timezone.now()
     delta_time = today - attr.added
     if delta_time.days >= 30:
-        if attr.like_count <= 200 or attr.download_count <= 20:
+        if attr.like_count <= 100 or attr.download_count <= 20:
             return False
     elif 10 <= delta_time.days < 30:
-        if attr.like_count <= 50 or attr.download_count <= 50:
+        if attr.like_count <= 20 or attr.download_count <= 10:
             return False
     elif delta_time.days < 10:
-        if attr.like_count <= 10 or attr.download_count <= 20:
+        if attr.like_count <= 10 or attr.download_count <= 5:
             return False
 
     return True
@@ -106,18 +106,25 @@ def thing_files_filter(thing: Objeto) -> bool:
 
 def complete_filter_func(thing: Objeto) -> bool:
     if not license_filter(thing):
-        return False
+        print('lic')
+        #return False
     if not image_filter(thing):
+        print('img')
         return False
     if not category_filter(thing):
+        print('cat')
         return False
     if not likes_filter(thing):
+        print('likes')
         return False
     if not nsfw_filter(thing):
+        print('nsfw')
         return False
     if not keyword_filter(thing):
+        print('keyword')
         return False
     if not thing_files_filter(thing):
+        print('files')
         return False
 
     return True

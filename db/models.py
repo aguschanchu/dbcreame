@@ -5,6 +5,7 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 from .tools import stl_to_sfb
 from .tools import dbdispatcher
+from .tools import score
 from .render.blender import render_image
 from .render.plot_poly import polyplot
 from . import tasks
@@ -150,7 +151,7 @@ class Objeto(models.Model):
     creation_date = models.DateTimeField(default=timezone.now)
     category = models.ManyToManyField(Categoria)
     tags = models.ManyToManyField(Tag)
-    external_id = models.OneToOneField(ReferenciaExterna,on_delete=models.SET_NULL,null=True)
+    external_id = models.OneToOneField(ReferenciaExterna,on_delete=models.CASCADE,null=True)
     #Se muestra en el catalogo?
     hidden = models.BooleanField(default=False)
     #Tiene algun descuento particular? precio_descontado = precio * discount
@@ -176,6 +177,10 @@ class Objeto(models.Model):
             return self.images.filter(main=True).first().thumbnail
         else:
             return None
+
+    @property
+    def score(self):
+        return score.score_object(self)
 
     def suggested_color(self):
         if self.default_color != None:
@@ -219,6 +224,9 @@ class Objeto(models.Model):
 
     @staticmethod
     def search_objects(query):
+        #Te imaginas que los resultados son bastante malos sin esto
+        if type(query) == str:
+            query = [query]
         objetos_n = Objeto.objects.none()
         objetos_t = Objeto.objects.none()
         for word in query:
@@ -226,7 +234,7 @@ class Objeto(models.Model):
         for word in query:
             objetos_t = objetos_t | Objeto.objects.filter(tags__name_es=word) | Objeto.objects.filter(tags__name=word)
 
-        return (objetos_t | objetos_n).distinct()
+        return (objetos_t | objetos_n).distinct().filter(hidden=False)
 
 '''
 Modelos accesorios

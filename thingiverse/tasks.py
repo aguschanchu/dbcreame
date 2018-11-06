@@ -26,11 +26,13 @@ from .filters.things_files_filter import thing_files_filter
 @shared_task(autoretry_for=(TypeError,ValueError,MaxRetryError), retry_backoff=True, max_retries=50)
 def request_from_thingi(url,content=False,params=''):
     endpoint = settings.THINGIVERSE_API_ENDPOINT
-    http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(400,501))))
+    http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501)))
+                       )
     for _ in range(0,60):
         k = ApiKey.get_api_key()
         if k != None:
             if not content:
+                print('URL a acceder {}'.format(endpoint+quote(url)+'?access_token='+k+params))
                 r = json.loads(http.request('GET',endpoint+quote(url)+'?access_token='+k+params).data.decode('utf-8'))
             else:
                 r = http.request('GET',endpoint+url+'?access_token='+k+params).data
@@ -145,17 +147,26 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
         #Pudimos obtener el modelo. eso significa que ya existe! Pero, está asociado a algo?
         for refext in modelos.ReferenciaExterna.objects.filter(repository='thingiverse',external_id=r['main']['id']):
             try:
-                refext.objeto
-                #Si no tenemos una exception, eso signfica que...
-                raise ValueError("Referencia externa en DB ¿existe el modelo?")
+                objeto = refext.objeto
+                #Si no tenemos una exception, eso signfica que ya existe un objeto con esa referencia. Devolvemos eso
+                print("WARNING: Referencia externa en DB ¿existe el modelo?")
+                return (objeto.id, [j['sizes'][12]['url'] for j in r['img']])
+
             except modelos.Objeto.DoesNotExist:
-                referencia_externa = refext
+                '''     
+                Esta excepcion nos dice que existe la referencia, pero, no el objeto. El unico escenario donde podria estar pasando,
+                es que haya una importacion  en curso de un objeto con la misma referencia. Por tal motivo, lentamos una excepcion,
+                con fe en el el retry entre no ocurra esta excepcion (pues, la otra importacion finalizo)
+                '''
+                raise ValueError("Referencia hallada, pero, no el objeto")
+            except MaxRetryError:
+                return (None, [])
     else:
         #Procedemos a crear la ref externa
         referencia_externa = modelos.ReferenciaExterna.objects.create(repository='thingiverse', external_id=r['main']['id'])
 
     ## Atributos externos
-    extattr = AtributoExterno.objects.create(reference=referencia_externa, license=r['main']['license'], like_count=r['main']['like_count'],
+    extattr = AtributoExterno.objects.get_or_create(reference=referencia_externa, license=r['main']['license'], like_count=r['main']['like_count'],
                                              download_count=r['main']['download_count'], added=dateutil.parser.parse(r['main']['added']),
                                              original_file_count=r['main']['file_count'])
 

@@ -95,10 +95,15 @@ class ObjetoThingi(models.Model):
         self.status = res.state
         if res.ready():
             result = res.result
-            self.object_id = modelos.Objeto.objects.get(pk=result[0])
-            # Tiene imagen principal?
-            if not self.object_id.main_image:
-                self.status = 'STARTED'
+            try:
+                self.object_id = modelos.Objeto.objects.get(pk=result[0])
+                # Tiene imagen principal?
+                if not self.object_id.main_image:
+                    self.status = 'STARTED'
+            except:
+                print("Error al levantar objeto. Ver logs de Celery")
+                self.object_id = None
+                self.status = 'FAILURE'
             else:
                 self.status = 'SUCCESS'
         self.save()
