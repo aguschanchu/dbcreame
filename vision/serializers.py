@@ -8,7 +8,7 @@ class TagSearchResultSerializer(serializers.ModelSerializer):
         fields = ('tag','score')
 
 class ImagenVisionAPISerializer(serializers.ModelSerializer):
-    tag_search_result = TagSearchResultSerializer(many=True)
+    tag_search_result = TagSearchResultSerializer(many=True,required=False)
     class Meta:
         model = ImagenVisionAPI
         fields = ('id','image','status','tag_search_result')

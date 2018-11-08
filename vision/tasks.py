@@ -50,7 +50,7 @@ def process_image(self,id):
             c.update_score()
 
         #Buscamos el tag en Thingiverse
-        things_restantes = lambda: 20*settings.VISION_RESULTS_AMOUNT
+        things_restantes = lambda: 40*settings.VISION_RESULTS_AMOUNT - objeto.search_result.count()
 
         r = request_from_thingi('search/{}'.format(tag))
         #Agregamos un contador para no importar todos los objetos relativos al primer tag
