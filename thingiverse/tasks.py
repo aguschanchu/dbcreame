@@ -98,15 +98,15 @@ def download_file(url, thingiid = None):
     else:
         return path
 
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, queue='low_priority')
 def translate_tag(tag_id):
     modelos.Tag.objects.get(pk=tag_id).translate_es()
 
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, queue='low_priority')
 def translate_category(cat_id):
     modelos.Categoria.objects.get(pk=cat_id).translate_es()
 
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, queue='low_priority')
 def translate_name(object_id):
     modelos.Objeto.objects.get(pk=object_id).translate_es()
 
@@ -131,7 +131,6 @@ def add_object_from_thingiverse_chain(thingiid, file_list = None, debug = True, 
     #Creacion de objeto a partir de informacion descargada
     res |= add_object.s(thingiid, partial, debug, origin)
     res |= download_images_task_group.s(partial)
-    res |= apply_thing_filter.s()
     if not partial:
         res |= add_files_to_thingiverse_object.s(file_list)
     return res
@@ -214,11 +213,12 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
 
     return (objeto.id, [j['sizes'][12]['url'] for j in r['img']])
 
-@shared_task
+@shared_task()
 def download_images_task_group(it,partial):
     # Map a callback over an iterator and return as a group
     res = [translate_name.s(it[0])]
-    res.append(download_image.s(it[0],it[1].pop(0),True))
+    #Una vez que se descargue la main image, podemos aplicar el filtro
+    res.append(download_image.s(it[0],it[1].pop(0),True) | apply_thing_filter.s())
     for i in it[1]:
         res.append(download_image.s(it[0],i,False))
     g = group(res).apply_async()
@@ -239,10 +239,11 @@ def download_image(objeto_id, url, main):
             os.remove(path)
     imagen.object = objeto
     imagen.save()
+    return objeto_id
 
 @shared_task(autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
 def apply_thing_filter(object_id):
-    objeto = modelos.Objeto.objects.get(pk=object_id[0])
+    objeto = modelos.Objeto.objects.get(pk=object_id)
     extattr = objeto.external_id.thingiverse_attributes
 
     thing = objeto
