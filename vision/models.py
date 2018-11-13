@@ -1,6 +1,7 @@
 from django.db import models
 from . import tasks
 from celery.result import AsyncResult
+from django.utils import timezone
 import uuid
 
 class ImagenVisionAPIManager(models.Manager):
@@ -18,6 +19,8 @@ class ImagenVisionAPI(models.Model):
     image = models.ImageField(upload_to='images/visionapi/')
     celery_id = models.CharField(max_length=100,blank=True,null=True)
     status = models.CharField(max_length=50,blank=True,null=True)
+    created = models.DateTimeField(default=timezone.now)
+    finished = models.DateTimeField(null=True)
 
     objects = ImagenVisionAPIManager()
 
@@ -25,6 +28,10 @@ class ImagenVisionAPI(models.Model):
     def search_results(self):
         self.filter_duplicates()
         return self.search_result.all().filter(object__isnull=False)
+
+    @property
+    def query_time(self):
+        return self.finished - self.created
 
     def filter_duplicates(self):
         #Hay duplicados? (SQL nos va decir mas rapido)
@@ -38,8 +45,6 @@ class ImagenVisionAPI(models.Model):
             else:
                 unique_ids.append(o.object.id)
 
-
-
     def update_status(self):
         res = AsyncResult(self.celery_id)
         #Termino la busqueda?
@@ -51,7 +56,9 @@ class ImagenVisionAPI(models.Model):
                 return False
         else:
             self.status = 'SUCCESS'
-            self.save(update_fields=['status'])
+            if not self.finished:
+                self.finished = timezone.now()
+            self.save(update_fields=['status', 'finished'])
 
 
 class ImagenVisionApiResult(models.Model):

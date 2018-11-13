@@ -16,8 +16,11 @@ def image_filter(thing: Objeto) -> bool:
     if thing.main_image is None:
         raise ValueError('Image not ready')
     # Image size filter
-    height = thing.main_image.height
-    width = thing.main_image.width
+    try:
+        height = thing.main_image.height
+        width = thing.main_image.width
+    except:
+        raise ValueError('Image not ready')
     if abs(width / height - 4 / 3) > 1/2:
         return False
 

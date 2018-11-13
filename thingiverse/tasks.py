@@ -12,21 +12,26 @@ from django.conf import settings
 import json
 import urllib3
 from urllib3.util import Retry
-from urllib3 import PoolManager
-from urllib3.exceptions import MaxRetryError
+from urllib3 import PoolManager, Timeout
+from urllib3.exceptions import MaxRetryError, TimeoutError
 import pickle
 urllib3.disable_warnings()
 from celery.task import control
-from celery.exceptions import SoftTimeLimitExceeded
+from celery.exceptions import SoftTimeLimitExceeded, MaxRetriesExceededError
 import dateutil.parser
 from .filters.things_filter import *
 from .filters.things_files_filter import thing_files_filter
 
 
-@shared_task(autoretry_for=(TypeError,ValueError,MaxRetryError), retry_backoff=True, max_retries=50)
+from celery.utils.log import get_task_logger
+logger = get_task_logger(__name__)
+
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError,MaxRetryError, TimeoutError), retry_backoff=True, max_retries=50)
 def request_from_thingi(url,content=False,params=''):
+    global logger
     endpoint = settings.THINGIVERSE_API_ENDPOINT
     http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501))),
+                       timeout = Timeout(read=10, connect=5)
                        )
     for _ in range(0,60):
         k = ApiKey.get_api_key()
@@ -41,10 +46,10 @@ def request_from_thingi(url,content=False,params=''):
         print('No encontre API keys')
     else:
         traceback.print_exc()
-        print("URL que intente acceder: "+endpoint+url+'?access_token='+str(k))
+        logger.error("Error al hacer la request ¿hay API keys disponibles?")
         raise ValueError("Error al hacer la request ¿hay API keys disponibles?")
 
-@shared_task(autoretry_for=(TypeError,ValueError,KeyError,MaxRetryError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError,KeyError,MaxRetryError), retry_backoff=True, max_retries=50)
 def get_thing_categories_list(thingiid):
     endpoint = settings.THINGIVERSE_API_ENDPOINT
     rcat = request_from_thingi('things/{}/categories'.format(thingiid))
@@ -76,15 +81,17 @@ def get_thing_categories_list(thingiid):
                 result.append(category_name)
     return result
 
-@shared_task(autoretry_for=(TypeError,ValueError,MaxRetryError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError,MaxRetryError, TimeoutError), retry_backoff=True, max_retries=50)
 def download_file(url, thingiid = None):
-    http = PoolManager(retries=Retry(total=2, backoff_factor=0.1, status_forcelist=list(range(400,501))))
+    http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(400, 501))),
+                       timeout=Timeout(connect=5))
     path = 'tmp/'+''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + '.stl'
     try:
         with open(path,'wb') as file:
             file.write(http.request('GET', url).data)
     except:
-        print("Error al descargar imagen")
+        traceback.print_exc()
+        logger.error("Error al descargar imagen, url {}".format(url))
         raise ValueError
     if thingiid != None:
         return (path, thingiid)
@@ -131,6 +138,7 @@ def add_object_from_thingiverse_chain(thingiid, file_list = None, debug = True, 
 
 @shared_task(bind=True,autoretry_for=(TypeError,ValueError,KeyError), retry_backoff=True, max_retries=50)
 def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
+    global logger
     print("Iniciando descarga de "+str(thingiid))
     #Preparamos y enviamos todas las requests que necesitamos
     r = {}
@@ -158,6 +166,7 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
                 es que haya una importacion  en curso de un objeto con la misma referencia. Por tal motivo, lentamos una excepcion,
                 con fe en el el retry entre no ocurra esta excepcion (pues, la otra importacion finalizo)
                 '''
+                logger.error("Referencia hallada {}, pero no el objeto. Reintento por si se trata de alguna race condition".format(r['main']['id']))
                 raise ValueError("Referencia hallada, pero, no el objeto")
             except MaxRetryError:
                 return (None, [])
@@ -218,7 +227,7 @@ def download_images_task_group(it,partial):
     else:
         return (it[0],0)
 
-@shared_task(autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
 def download_image(objeto_id, url, main):
     objeto = modelos.Objeto.objects.get(pk=objeto_id)
     imagen = modelos.Imagen()
