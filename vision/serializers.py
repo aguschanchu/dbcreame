@@ -11,8 +11,8 @@ class ImagenVisionAPISerializer(serializers.ModelSerializer):
     tag_search_result = TagSearchResultSerializer(many=True,required=False)
     class Meta:
         model = ImagenVisionAPI
-        fields = ('id','image','status','tag_search_result')
-        read_only_fields=('status','search_results','tag_search_result')
+        fields = ('id','image','status','query_time','tag_search_result')
+        read_only_fields=('status','search_results','tag_search_result','query_time')
 
     def create(self, validated_data):
         return ImagenVisionAPI.objects.create_object(**validated_data)
