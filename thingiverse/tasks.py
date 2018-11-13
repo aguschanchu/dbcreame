@@ -44,6 +44,7 @@ def request_from_thingi(url,content=False,params=''):
                 return r
         except (MaxRetryError, TimeoutError):
             # Por algun motivo celery no maneja bien estos errores. Por eso, los handleo, y re-raise otro tipo de error
+            traceback.print_exc()
             logger.warning("Error al realizar request")
             raise ValueError
 
