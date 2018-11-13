@@ -26,7 +26,7 @@ from .filters.things_files_filter import thing_files_filter
 from celery.utils.log import get_task_logger
 logger = get_task_logger(__name__)
 
-@shared_task(queue='http',autoretry_for=(TypeError,ValueError,MaxRetryError, TimeoutError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
 def request_from_thingi(url,content=False,params=''):
     global logger
     endpoint = settings.THINGIVERSE_API_ENDPOINT
@@ -35,13 +35,19 @@ def request_from_thingi(url,content=False,params=''):
                        )
     for _ in range(0,60):
         k = ApiKey.get_api_key()
-        if k != None:
-            if not content:
-                print('URL a acceder {}'.format(endpoint+quote(url)+'?access_token='+k+params))
-                r = json.loads(http.request('GET',endpoint+quote(url)+'?access_token='+k+params).data.decode('utf-8'))
-            else:
-                r = http.request('GET',endpoint+url+'?access_token='+k+params).data
-            return r
+        try:
+            if k != None:
+                if not content:
+                    r = json.loads(http.request('GET',endpoint+quote(url)+'?access_token='+k+params).data.decode('utf-8'))
+                else:
+                    r = http.request('GET',endpoint+url+'?access_token='+k+params).data
+                return r
+        except (MaxRetryError, TimeoutError):
+            # Por algun motivo celery no maneja bien estos errores. Por eso, los handleo, y re-raise otro tipo de error
+            logger.warning("Error al realizar request")
+            raise ValueError
+
+
         time.sleep(1)
         print('No encontre API keys')
     else:
@@ -81,7 +87,7 @@ def get_thing_categories_list(thingiid):
                 result.append(category_name)
     return result
 
-@shared_task(queue='http',autoretry_for=(TypeError,ValueError,MaxRetryError, TimeoutError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
 def download_file(url, thingiid = None):
     http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(400, 501))),
                        timeout=Timeout(connect=5))
@@ -89,6 +95,12 @@ def download_file(url, thingiid = None):
     try:
         with open(path,'wb') as file:
             file.write(http.request('GET', url).data)
+
+    except (MaxRetryError, TimeoutError):
+        # Por algun motivo celery no maneja bien estos errores. Por eso, los handleo, y re-raise otro tipo de error
+        logger.warning("Error al realizar request")
+        raise ValueError
+
     except:
         traceback.print_exc()
         logger.error("Error al descargar imagen, url {}".format(url))
