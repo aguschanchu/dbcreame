@@ -31,7 +31,10 @@ class ImagenVisionAPI(models.Model):
 
     @property
     def query_time(self):
-        return self.finished - self.created
+        if self.finished:
+            return self.finished - self.created
+        else:
+            return 0
 
     def filter_duplicates(self):
         #Hay duplicados? (SQL nos va decir mas rapido)
