@@ -50,32 +50,41 @@ def process_image(self,id):
             c.update_score()
 
         #Buscamos el tag en Thingiverse
-        things_restantes = lambda: 40*settings.VISION_RESULTS_AMOUNT - objeto.search_result.count()
+        things_restantes = lambda: 5*settings.VISION_RESULTS_AMOUNT - objeto.search_result.count()
 
-        r = request_from_thingi('search/{}'.format(tag))
-        #Agregamos un contador para no importar todos los objetos relativos al primer tag
-        label_count = 0
-        #De la lista de resultados, ejecutamos la importacion parcial
-        while r and 0 <= things_restantes() and label_count <= settings.VISION_RESULTS_AMOUNT:
-            #Hubo resultados?
-            try:
-                id = r.pop(0)['id']
-            except:
-                break
-            #Antes de agregarlo, no esta ya como resultado de busqueda y/o pendiente de importacion, no?
-            busqueda_pendiente = any([id == c.object.id for c in objeto.search_result.all() if c.object != None] +
-                                     [id == c.subtask.external_id for c in objeto.search_result.all() if c.subtask != None])
-            #No es uno de los objetos que ya teniamos en la DB, no?
-            busqueda_preexistente = Objeto.objects.filter(external_id__external_id=str(id)).first()
-            if busqueda_pendiente:
-                pass
-            elif busqueda_preexistente:
-                c = modelos.ImagenVisionApiResult.objects.create(search=objeto, object=busqueda_preexistente, label_score=label.score)
-                c.update_score()
-            else:
-                subtask = ObjetoThingi.objects.create_object(external_id=id, partial=True, origin='vision')
-                modelos.ImagenVisionApiResult.objects.create(search=objeto, subtask=subtask, label_score=label.score)
-
-            label_count += 1
+        #No queremos buscar más de VISION_RESULTS_AMOUNT por tag, y, al menos, buscar 5
+        search_amount = max(5, min(settings.VISION_RESULTS_AMOUNT, things_restantes()))
+        if search_amount > 0:
+            search = search_tag_in_thingiverse.delay(objeto.id, tag, search_amount, label.score)
+            modelos.ThingiverseSearch.objects.create(parent=objeto,celery_id=search.id)
 
     return True
+
+@shared_task(bind=True, max_retries=50, retry_backoff=True)
+def search_tag_in_thingiverse(self, search_id, tag, search_amount, score):
+    objeto = modelos.ImagenVisionAPI.objects.get(pk=search_id)
+    r = request_from_thingi('search/{}'.format(tag))
+    # De la lista de resultados, ejecutamos la importacion parcial
+    label_count = 0
+    while r and label_count <= search_amount:
+        # Hubo resultados?
+        try:
+            id = r.pop(0)['id']
+        except:
+            break
+        # Antes de agregarlo, no esta ya como resultado de busqueda y/o pendiente de importacion, no?
+        busqueda_pendiente = any([id == c.object.id for c in objeto.search_result.all() if c.object != None] +
+                                 [id == c.subtask.external_id for c in objeto.search_result.all() if c.subtask != None])
+        # No es uno de los objetos que ya teniamos en la DB, no?
+        busqueda_preexistente = Objeto.objects.filter(external_id__external_id=str(id)).first()
+        if busqueda_pendiente:
+            pass
+        elif busqueda_preexistente:
+            c = modelos.ImagenVisionApiResult.objects.create(search=objeto, object=busqueda_preexistente,
+                                                             label_score=score)
+            c.update_score()
+        else:
+            subtask = ObjetoThingi.objects.create_object(external_id=id, partial=True, origin='vision')
+            modelos.ImagenVisionApiResult.objects.create(search=objeto, subtask=subtask, label_score=score)
+
+        label_count += 1

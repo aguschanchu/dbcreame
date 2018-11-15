@@ -2,6 +2,7 @@ from django.db import models
 from . import tasks
 from celery.result import AsyncResult
 from django.utils import timezone
+from django.conf import settings
 import uuid
 
 class ImagenVisionAPIManager(models.Manager):
@@ -50,14 +51,19 @@ class ImagenVisionAPI(models.Model):
 
     def update_status(self):
         res = AsyncResult(self.celery_id)
-        #Termino la busqueda?
+        #Termino la busqueda de tags?
         if not res.ready():
             return False
-        #OK, si. Tiene alguna subtarea pendiente? De ser asi, actualizamos el estado de las mismas
-        for s in self.search_result.all():
-            if not s.ready():
+        #Termino la busqueda en Thingiverse?
+        for o in self.thingiverse_search.all():
+            if not o.ready():
                 return False
-        else:
+        #OK, si. Actualizamos el estado de las subtareas
+        for s in self.search_result.all():
+            s.ready()
+        #Tenemos al menos VISION_API_RESULTS para devolver? De ser asi, consideramos finalizada la busqueda
+        #O bien, si terminaron todas las subtareas
+        if len(self.search_results) > settings.VISION_RESULTS_AMOUNT or all([s.ready() for s in self.search_result.all()]):
             self.status = 'SUCCESS'
             if not self.finished:
                 self.finished = timezone.now()
@@ -97,7 +103,16 @@ class ImagenVisionApiResult(models.Model):
         else:
             return False
 
+
+class ThingiverseSearch(models.Model):
+    celery_id = models.CharField(max_length=100,blank=True,null=True)
+    parent = models.ForeignKey(ImagenVisionAPI, related_name='thingiverse_search', on_delete=models.CASCADE)
+
+    def ready(self):
+        return AsyncResult(self.celery_id).ready()
+
+
 class TagSearchResult(models.Model):
     tag = models.CharField(max_length=100)
     score = models.FloatField(default=0)
-    parent = models.ForeignKey(ImagenVisionAPI,related_name='tag_search_result',on_delete=models.CASCADE)
+    parent = models.ForeignKey(ImagenVisionAPI, related_name='tag_search_result', on_delete=models.CASCADE)
