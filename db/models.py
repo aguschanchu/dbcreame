@@ -236,11 +236,13 @@ class Objeto(models.Model):
         #Te imaginas que los resultados son bastante malos sin esto
         if type(query) == str:
             query = [query]
+        #Le quitamos los caracteres especiales
+        query_f = [''.join((c for c in unicodedata.normalize('NFD', q) if unicodedata.category(c) != 'Mn')) for q in query]
         objetos_n = Objeto.objects.none()
         objetos_t = Objeto.objects.none()
-        for word in query:
+        for word in query_f:
             objetos_n = objetos_n | Objeto.objects.filter(name__icontains=word) | Objeto.objects.filter(name_es_unicode__icontains=word)
-        for word in query:
+        for word in query_f:
             objetos_t = objetos_t | Objeto.objects.filter(tags__name_es_unicode__iexact=word) | Objeto.objects.filter(tags__name__iexact=word)
 
         return (objetos_t | objetos_n).distinct().filter(hidden=False)
