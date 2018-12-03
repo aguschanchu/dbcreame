@@ -15,6 +15,8 @@ class ArchivoSTLSerializer(serializers.ModelSerializer):
         fields = ('id','file','printing_time_default','size_x_default','size_y_default','size_z_default','weight_default','time_as_a_function_of_scale')
 
 class ImagenSerializer(serializers.ModelSerializer):
+    photo = serializers.ImageField(use_url=True, max_length=None)
+
     class Meta:
         model = Imagen
         fields = ('photo',)
@@ -43,10 +45,16 @@ class ObjetoSerializer(serializers.ModelSerializer):
             return False
     liked = serializers.SerializerMethodField('liked_get')
 
-    main_image_thumbnail = serializers.ImageField(allow_null=True,use_url=True)
-    main_image = serializers.ImageField(allow_null=True,use_url=True)
+    def images_get(self, obj):
+        queryset = obj.images.order_by('-main')
+        serializer_context = {'request': self.context.get('request')}
+        return ImagenSerializer(queryset, many=True, context=serializer_context).data
+
+
+    main_image_thumbnail = serializers.ImageField(allow_null=True, use_url=True)
+    main_image = serializers.ImageField(allow_null=True, use_url=True)
     files = ArchivoSTLSerializer(many=True)
-    images = ImagenSerializer(many=True)
+    images = serializers.SerializerMethodField('images_get')
     ar_model = ModeloArSerializer(source='modeloar')
     suggested_color = ColorSerializer()
 
@@ -110,7 +118,7 @@ class CompraSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         #Obtenemos DireccionDeEnvio a partir de delivery_address_char
         delivery_address_data = validated_data.pop('delivery_address')
-        delivery_address, created = DireccionDeEnvio.objects.get_or_create(gmaps_id=delivery_address_data['gmaps_id'],usuario=self.context['request'].user.usuario)
+        delivery_address, created = DireccionDeEnvio.objects.get_or_create(gmaps_id=delivery_address_data['gmaps_id'],  usuario=self.context['request'].user.usuario)
         notes = delivery_address_data['notes'] if 'notes' in delivery_address_data else None
         if created:
             delivery_address.notes = notes
