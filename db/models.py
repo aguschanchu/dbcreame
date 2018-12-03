@@ -15,6 +15,7 @@ import os
 import shutil
 import trimesh
 import googlemaps
+import unicodedata
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save, pre_save, m2m_changed
 from django.dispatch import receiver
@@ -69,6 +70,7 @@ def translate_category_signal(sender, instance, created, **kwargs):
 class Tag(models.Model):
     name = models.CharField(max_length=300,unique=True)
     name_es = models.CharField(max_length=300,blank=True,null=True)
+    name_es_unicode = models.CharField(max_length=300, blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -77,8 +79,11 @@ class Tag(models.Model):
         if self.name_es == None or force:
             if translate_client == None:
                 translate_client = translate.Client()
-            translation = translate_client.translate(self.name,source_language='en',target_language='es')
+            translation = translate_client.translate(self.name, source_language='en', target_language='es')
             self.name_es = translation['translatedText']
+            #Guardamos el nombre en unicode (aka removiendo tildes) para facilitar las busquedas
+            self.name_es_unicode = ''.join((c for c in unicodedata.normalize('NFD', self.name_es) if unicodedata.category(c) != 'Mn'))
+            self.save(update_fields=['name_es', 'name_es_unicode'])
             self.save()
 
 @receiver(post_save, sender=Tag)
@@ -145,7 +150,8 @@ origenes = (
 class Objeto(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=300)
-    name_es = models.CharField(max_length=300,null=True,blank=True)
+    name_es = models.CharField(max_length=300, null=True, blank=True)
+    name_es_unicode = models.CharField(max_length=300, null=True, blank=True)
     description = models.TextField(blank=True,null=True)
     like_count = models.IntegerField(blank=True,default=0)
     author = models.ForeignKey(Autor,on_delete=models.PROTECT)
@@ -205,7 +211,9 @@ class Objeto(models.Model):
                 translate_client = translate.Client()
             translation = translate_client.translate(self.name,source_language='en',target_language='es')
             self.name_es = translation['translatedText']
-            self.save(update_fields=['name_es'])
+            #Guardamos el nombre en unicode (aka removiendo tildes) para facilitar las busquedas
+            self.name_es_unicode = ''.join((c for c in unicodedata.normalize('NFD', self.name_es) if unicodedata.category(c) != 'Mn'))
+            self.save(update_fields=['name_es', 'name_es_unicode'])
 
     #En lugar de sumar default_printing_time, evaluamos tiempo(escala) en 1. Esto, es para evitar difierencias al usar el polinomio
     def printing_time_default_total(self):
@@ -231,9 +239,9 @@ class Objeto(models.Model):
         objetos_n = Objeto.objects.none()
         objetos_t = Objeto.objects.none()
         for word in query:
-            objetos_n = objetos_n | Objeto.objects.filter(name__contains=word) | Objeto.objects.filter(name_es__contains=word)
+            objetos_n = objetos_n | Objeto.objects.filter(name__icontains=word) | Objeto.objects.filter(name_es_unicode__icontains=word)
         for word in query:
-            objetos_t = objetos_t | Objeto.objects.filter(tags__name_es=word) | Objeto.objects.filter(tags__name=word)
+            objetos_t = objetos_t | Objeto.objects.filter(tags__name_es_unicode__iexact=word) | Objeto.objects.filter(tags__name__iexact=word)
 
         return (objetos_t | objetos_n).distinct().filter(hidden=False)
 

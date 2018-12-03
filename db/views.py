@@ -89,7 +89,6 @@ class SearchView(generics.ListAPIView):
         query = self.kwargs.get(self.lookup_url_kwarg).split(' ')
         return Objeto.search_objects(query)
 
-
 '''
 List views
 '''
