@@ -46,6 +46,7 @@ Clases accesorias
 class Categoria(models.Model):
     name = models.CharField(max_length=100,unique=True)
     name_es = models.CharField(max_length=100,blank=True,null=True)
+    hidden = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name

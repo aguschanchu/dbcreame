@@ -104,7 +104,7 @@ class ListAllCategoriesView(generics.ListAPIView):
     serializer_class = CategoriaSerializer
 
     def get_queryset(self):
-        return Categoria.objects.all()
+        return Categoria.objects.filter(hidden=False)
 
 class ListAllTagsView(generics.ListAPIView):
     serializer_class = TagSerializer

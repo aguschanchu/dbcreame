@@ -9,7 +9,7 @@ class AutorAdmin(admin.ModelAdmin):
 
 @admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
-    list_display = ('name','name_es')
+    list_display = ('name','name_es','hidden')
     search_fields = ('name',)
 
 @admin.register(ArchivoSTL)
