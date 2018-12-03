@@ -25,6 +25,8 @@ urlpatterns = [
     url(r'^db/', include('db.urls')),
     url(r'^thingiverse/', include('thingiverse.urls')),
     url(r'^vision/', include('vision.urls')),
+    url(r'^photogrammetry/', include('photogrammetry.urls')),
+
 ]
 
 #Mercadopago

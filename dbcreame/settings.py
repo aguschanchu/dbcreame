@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'db',
     'thingiverse',
     'vision',
+    'photogrammetry',
 ]
 
 MIDDLEWARE = [
