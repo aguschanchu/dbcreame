@@ -1,0 +1,39 @@
+Verde oscuro: 
+1 49 0
+013100
+
+Verde claro: 
+18 181 12
+12B50C
+
+Amarillo: 
+255 242 8
+FFF208
+
+Azul:
+9 84 245
+0954F5
+
+Celeste:
+10 115 184
+0A73B8
+
+Naranja:
+225 132 0
+FF8400
+
+Rojo: 
+221 58 0 
+793A00 
+
+Gris: 
+96 96 96
+606060
+
+Negro: 
+0 0 0
+000000
+
+Blanco:
+225 225 225
+FFFFFF

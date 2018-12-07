@@ -1,20 +1,27 @@
-from db.serializers import ObjetoSerializer, ObjetoThingiSerializer, TagSerializer, CategoriaSerializer, UserSerializer, CompraSerializer
-from db.models import Objeto, Tag, Categoria, Compra
-from rest_framework import generics, status, pagination
+from db.serializers import ObjetoSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer
+from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado, SfbRotationTracker, Usuario
+from rest_framework import generics, status, pagination, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from django.http import Http404
-from .tools import import_from_thingi
+from django.db.models import Q
+from db.tools import price_calculator
 import json
 import traceback
+from django_mercadopago import models as MPModels
+import mercadopago
+from . import tasks
 # Auth
+from django.contrib.auth.models import User
 from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from django.conf import settings
 
+# TEMP
+import requests
 '''
 Pagination classes
 '''
@@ -33,7 +40,7 @@ class CategoryView(generics.ListAPIView):
 
     def get_queryset(self):
         category = self.kwargs.get(self.lookup_url_kwarg)
-        objetos = Objeto.objects.filter(category__name=category)
+        objetos = Objeto.objects.filter(category__name=category, origin='human', hidden=False)
         return objetos
 
 class TagView(generics.ListAPIView):
@@ -80,18 +87,7 @@ class SearchView(generics.ListAPIView):
 
     def get_queryset(self):
         query = self.kwargs.get(self.lookup_url_kwarg).split(' ')
-        objetos_n = Objeto.objects.none()
-        objetos_t = Objeto.objects.none()
-        for word in query:
-            objetos_n = objetos_n | Objeto.objects.filter(name__contains=word) | Objeto.objects.filter(name_es__contains=word)
-        for word in query:
-            objetos_t = objetos_t | Objeto.objects.filter(tags__name_es=word) | Objeto.objects.filter(tags__name=word)
-
-        return (objetos_t | objetos_n).distinct()
-
-
-
-
+        return Objeto.search_objects(query)
 
 '''
 List views
@@ -107,20 +103,90 @@ class ListAllCategoriesView(generics.ListAPIView):
     serializer_class = CategoriaSerializer
 
     def get_queryset(self):
-        return Categoria.objects.all()
+        return Categoria.objects.filter(hidden=False)
 
 class ListAllTagsView(generics.ListAPIView):
     serializer_class = TagSerializer
-
     def get_queryset(self):
         return Tag.objects.all()
+
+class ListAllColorsView(generics.ListAPIView):
+    serializer_class = ColorSerializer
+    queryset = Color.objects.all()
+
+
+'''
+Orders views
+'''
 
 class ListAllOrdersView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = CompraSerializer
 
     def get_queryset(self):
-        return Compra.objects.filter(buyer=self.request.user.usuario)
+        user = self.request.user
+        return Compra.objects.filter(Q(buyer=user.usuario) & ~Q(status='checkout-pending'))
+
+class GetPreferenceInfoFromMP(APIView):
+    def post(self, request, mpid, format=None):
+        mp_account = MPModels.Account.objects.first()
+        mp_client = mercadopago.MP(mp_account.app_id, mp_account.secret_key)
+        return Response(mp_client.get_preference(mpid)['response'])
+
+class CreateOrderView(generics.CreateAPIView):
+    serializer_class = CompraSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        #Creamos la compra a partir de los datos serializados
+        compra = serializer.save()
+        #Asignamos el comprador
+        user = request.user
+        compra.buyer = user.usuario
+        #Creamos la preferencia de pago de MP
+        precio_total = price_calculator.get_order_price(compra)
+        mp_account = MPModels.Account.objects.first()
+        compra.payment_preferences = MPModels.Preference.objects.create(
+            title='Compra del {}'.format(compra.date),
+            price=precio_total,
+            description='Compra en Creame3D',
+            reference=str(compra.id),
+            account=mp_account)
+        #MP requiere email y nombre del comprador, de modo, que ingresamos esos datos
+        mp_client = mercadopago.MP(mp_account.app_id, mp_account.secret_key)
+        preference = {'payer': {'email': user.email if user.email != '' else 'compras@creame3d.com','name':user.username}}
+        preferenceResult = mp_client.update_preference(compra.payment_preferences.mp_id, preference)
+        #Devolvemos el resultado
+        compra.save()
+        serializer = self.get_serializer(compra)
+        print('asd')
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data)
+
+class CheckoutSuccessNotification(generics.RetrieveAPIView):
+    serializer_class = CompraSerializer
+    permission_classes = (IsAuthenticated,)
+    lookup_url_kwarg = 'id'
+
+    def get_object(self):
+        id = self.kwargs.get(self.lookup_url_kwarg)
+        try:
+            objeto = Compra.objects.get(id=id)
+        except Compra.DoesNotExist:
+             raise Http404
+        return objeto
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        #Cambiamos el estado de la instancia
+        instance.status = 'pending-payment'
+        instance.save()
+        #Ejecutamos la comprobacion de pago
+        tasks.query_mp_for_payment_status.delay(instance.payment_preferences.id)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 '''
 Operations views
@@ -162,27 +228,52 @@ class ToggleLike(generics.UpdateAPIView):
         print(serializer)
         return Response(serializer.data)
 
+class ToggleRotated(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = SfbRotationTrackerSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        #Existe ya la instancia en la DB? De ser así, actualizamos
+        if SfbRotationTracker.objects.filter(object=serializer.validated_data['object'],usuario=request.user.usuario.id).exists():
+            obj = SfbRotationTracker.objects.get(object=serializer.validated_data['object'],usuario=request.user.usuario.id)
+            obj.rotated = serializer.validated_data['rotated']
+            obj.save()
+        else:
+            SfbRotationTracker.objects.create(object=serializer.validated_data['object'],usuario=request.user.usuario,rotated=serializer.validated_data['rotated'])
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+class UserInformationView(generics.RetrieveUpdateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = UsuarioSerializer
+    def get_object(self):
+        return Usuario.objects.get(pk=self.request.user.usuario.id)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
+
 '''
 DB Operations view
 '''
 
-class AddObjectFromThingiverse(APIView):
-    permission_classes = (IsAdminUser,)
-    #Agregar objeto desde id y lista de archivos
-    def post(self, request, format=None):
-        serializer = ObjetoThingiSerializer(data=request.data)
-        if serializer.is_valid():
-            obj = serializer.save()
-            #Ejecutamos la importacion
-            try:
-                job = import_from_thingi.add_object_from_thingiverse(obj.external_id,obj.file_list)
-                obj.status = 'finished'
-            except:
-                traceback.print_exc()
-                obj.status = 'error'
-            obj.save()
-            return Response(ObjetoThingiSerializer(obj).data)
-        return Response(serializer.errors)
+class SendAppSetupInformation(APIView):
+    def get(self, request, format=None):
+        serializer = AppSetupInformationSerializer(price_calculator.obtener_parametros_de_precios())
+        return Response(serializer.data)
+
 
 '''
 Social login views
@@ -198,7 +289,7 @@ class GoogleLogin(SocialLoginView):
     POST parameter `code` should contain the access code provided by Google OAuth backend,
     which the backend uses in turn to fetch user data from the Google authentication backend.
 
-    POST parameter `access_token` might not function with this function.
+    POST parameter `access' might not function with this function.
 
     Requires `callback_url` to be properly set in the configuration, this is of format:
 
@@ -207,4 +298,20 @@ class GoogleLogin(SocialLoginView):
 
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
-    callback_url = 'http://127.0.0.1:8000/db/accounts/google/login/callback/'
+    callback_url = settings.CURRENT_PROTOCOL+ '://' + settings.CURRENT_HOST + ':' + str(settings.CURRENT_PORT) + '/db/accounts/google/login/callback/'
+
+'''
+Mercadopago
+'''
+
+class MercadopagoSuccessUrl(generics.RetrieveAPIView):
+    serializer_class = PaymentNotificationSerializer
+    lookup_url_kwarg = 'pk'
+
+    def get_object(self):
+        pk = self.kwargs.get(self.lookup_url_kwarg)
+        try:
+            preference = MPModels.Notification.objects.get(id=pk)
+        except MPModels.Notification.DoesNotExist:
+             raise Http404
+        return preference

@@ -1,5 +1,11 @@
 migrations
 *.pyc
 *.stl
+*.log
 media
 tmp
+server-dev.ini
+dbcreame/localenv.py
+enviorment
+google_credentials.json
+.idea

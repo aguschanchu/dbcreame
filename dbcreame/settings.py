@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
 import os
+from .localenv import *
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,8 +26,7 @@ SECRET_KEY = '***REMOVED***'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1','192.168.1.2']
-
+ALLOWED_HOSTS = ['api.creame3d.com','localhost','127.0.0.1','192.168.1.2','agusc.ovh','192.168.100.104']
 
 # Application definition
 
@@ -49,8 +49,19 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.facebook',
     'allauth.socialaccount.providers.google',
+    #Procesamiento de imagenes
+    'imagekit',
+    #Mercadochorros
+    'django_mercadopago',
+    #Testeo lindo
+    'django_nose',
+    #Celery
+    'django_celery_results',
     #Aplicaciones propias
     'db',
+    'thingiverse',
+    'vision',
+    'photogrammetry',
 ]
 
 MIDDLEWARE = [
@@ -61,9 +72,30 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'request_logging.middleware.LoggingMiddleware',
 ]
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',  # change debug level as appropiate
+            'propagate': False,
+        },
+    },
+}
+
+
 ROOT_URLCONF = 'dbcreame.urls'
+
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 TEMPLATES = [
     {
@@ -91,8 +123,15 @@ WSGI_APPLICATION = 'dbcreame.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'dbapi',
+        'USER': 'dbapi',
+        'PASSWORD': '***REMOVED***',
+        'HOST': '127.0.0.1',
+        'PORT': '',
+        'OPTIONS': {
+           'sslmode': 'disable',
+        }
     }
 }
 
@@ -129,9 +168,9 @@ USE_L10N = True
 
 USE_TZ = True
 
-SITE_ID = 1
-
 ADMIN_SITE_HEADER = "NoName DB Administration"
+
+SITE_ID = 1
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -139,8 +178,8 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
-    ),
-}
+    )
+    }
 
 AUTHENTICATION_BACKENDS = (
        # Needed to login by username in Django admin, regardless of `allauth`
@@ -151,20 +190,56 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = '/static/'
-
 MEDIA_ROOT = 'media/'
 MEDIA_URL = '/media/'
+FILE_UPLOAD_PERMISSIONS = 0o644
+DATA_UPLOAD_MAX_MEMORY_SIZE = 25*1024**2
+FILE_UPLOAD_MAX_MEMORY_SIZE = 25*1024**2
 
 #Allauth configuration
 SOCIALACCOUNT_EMAIL_VERIFICATION = None
 SOCIALACCOUNT_EMAIL_REQUIRED = False
 SOCIALACCOUNT_QUERY_EMAIL = True
+ACCOUNT_EMAIL_VERIFICATION = None
 
+#MercadoLibre configuration
+MERCADOPAGO = {
+    'autoprocess': True,
+    'success_url': 'db:success_url',
+    'failure_url': 'myapp:mp_failure',
+    'pending_url': 'myapp:mp_pending',
+    'base_host': CURRENT_PROTOCOL + '://' + CURRENT_HOST
+}
+#Significa que todos los pagos son tomados como validos
+MERCADOPAGO_SANDBOX_MODE = True
+
+#Celery config
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_BROKER_URL = 'amqp://'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_SOFT_TIME_LIMIT = 600*3
+CELERY_CHORD_UNLOCK_MAX_RETRIES = 60
+CELERY_PREFETCH_MULTIPLIER = 1
+CELERY_QUEUES = ('http','celery','low_priority')
 
 #Configuraciones adicionales
 SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'
 THINGIVERSE_API_ENDPOINT = 'https://api.thingiverse.com/'
+DB_ADMIN_USERNAME = 'agus'
+DB_ADMIN_PASSWORD = 'Ferraro'
+
+#Configuracion de APIs de Google (Translate y Vision)
+GOOGLE_APPLICATION_CREDENTIALS = "google_credentials.json"
+GOOGLE_MAPS_API_KEY = "***REMOVED***"
+
+#Configuracion de Vision
+VISION_RESULTS_AMOUNT = 10
+
+#Configuraciones de precios
+PRECIO_POR_HORA_DE_IMPRESION = 40

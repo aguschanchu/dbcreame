@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR
+from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio
 from django.utils.html import format_html_join, format_html
 import trimesh
 
@@ -9,7 +9,7 @@ class AutorAdmin(admin.ModelAdmin):
 
 @admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
-    list_display = ('name','name_es')
+    list_display = ('name','name_es','hidden')
     search_fields = ('name',)
 
 @admin.register(ArchivoSTL)
@@ -25,6 +25,10 @@ class TagAdmin(admin.ModelAdmin):
 @admin.register(Polinomio)
 class PolinomioAdmin(admin.ModelAdmin):
     list_display = ('a0','a1','a2','a3','a4','a5')
+    readonly_fields = ('image',)
+
+    def image(self,obj):
+        return format_html('<img src='+obj.plot.url+' width="40%" height="40%"></img>')
 
 @admin.register(ReferenciaExterna)
 class ReferenciaExternaAdmin(admin.ModelAdmin):
@@ -47,7 +51,7 @@ class ModelARInline(admin.StackedInline):
     verbose_name = "Modelo AR"
     verbose_name_plural = verbose_name
     fk = "object"
-    list_display = ('name','combined_stl','sfb_file','human_flag')
+    list_display = ('name','combined_stl','sfb_file','sfb_file_rotated','human_flag')
     list_filter = ('human_flag',)
     readonly_fields = ('name','image','combined_stl')
 
@@ -57,7 +61,7 @@ class ModelARInline(admin.StackedInline):
         }),
         ('Archivos', {
             'classes': ('collapse',),
-            'fields': ('sfb_file',),
+            'fields': ('sfb_file','sfb_file_rotated'),
         })
     )
     def name(self,obj):
@@ -72,14 +76,14 @@ class ObjetoAdmin(admin.ModelAdmin):
     list_display = ('name','author','external_id','total_printing_time_default','human_flag')
     raw_id_fields = ('author',)
     filter_horizontal = ('category','tags')
-    readonly_fields = ['view_main_image','total_printing_time_default']
+    readonly_fields = ['view_main_image','total_printing_time_default','popular_color']
     inlines = [ArchivoSTLInline,ImagenInline,ModelARInline]
     fieldsets = (
             (None, {
                 'fields': (('name','name_es'),)
                 }),
             (None, {
-                'fields': ('view_main_image',('author','like_count','total_printing_time_default','hidden'))
+                'fields': ('view_main_image',('author','like_count','total_printing_time_default','discount','hidden'),('default_color','popular_color'))
                 }),
             ('Descripcion', {
                 'fields': ('description',),
@@ -108,6 +112,18 @@ class ObjetoAdmin(admin.ModelAdmin):
 class UsuarioAdmin(admin.ModelAdmin):
     list_display = ('user',)
 
+@admin.register(SfbRotationTracker)
+class UsuarioAdmin(admin.ModelAdmin):
+    list_display = ('object','rotated','usuario')
+
+@admin.register(Color)
+class ColorAdmin(admin.ModelAdmin):
+    list_display = ('name','color','available')
+    read_only = ('color')
+
+    def color(self,obj):
+        return format_html("<div style='background: #{}; height: 20px;'></div>".format(obj.code))
+
 
 @admin.register(ObjetoPersonalizado)
 class ObjetoPersonalizadoAdmin(admin.ModelAdmin):
@@ -115,7 +131,12 @@ class ObjetoPersonalizadoAdmin(admin.ModelAdmin):
 
 @admin.register(Compra)
 class CompraAdmin(admin.ModelAdmin):
-    list_display = ('date','status')
+    list_display = ('date','status','buyer')
+    ordering = ('date',)
+
+@admin.register(DireccionDeEnvio)
+class CompraAdmin(admin.ModelAdmin):
+    list_display = ('short_address','usuario','notes')
 
 @admin.register(Imagen)
 class ImagenAdmin(admin.ModelAdmin):
