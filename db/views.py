@@ -1,5 +1,5 @@
-from db.serializers import ObjetoSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer
-from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado, SfbRotationTracker, Usuario
+from db.serializers import ObjetoSerializer, TagSerializer, CategoriaSerializer, CompraSerializer, PaymentPreferencesSerializer, PaymentNotificationSerializer, ColorSerializer, SfbRotationTrackerSerializer, UsuarioSerializer, UserSerializer, AppSetupInformationSerializer, ComentarioSerializer, ValoracionSerializer
+from db.models import Objeto, Tag, Categoria, Compra, Color, ObjetoPersonalizado, SfbRotationTracker, Usuario, Objeto, Comentario, Valoracion
 from rest_framework import generics, status, pagination, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -20,14 +20,16 @@ from rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from django.conf import settings
 
-# TEMP
-import requests
 '''
 Pagination classes
 '''
 class ObjectPagination(pagination.CursorPagination):
     page_size = 10
     ordering = 'creation_date'
+
+class CommentPagination(pagination.CursorPagination):
+    page_size = 10
+    ordering = '-creation_date'
 
 '''
 Query views
@@ -264,6 +266,72 @@ class UserInformationView(generics.RetrieveUpdateAPIView):
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)
+
+class CreateNewCommentView(generics.CreateAPIView):
+    serializer_class = ComentarioSerializer
+    permission_classes = (IsAuthenticated, )
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        #Verifiquemos que no existe ya el comentario de este usario para este objeto
+        comentario = Comentario.objects.filter(user=self.request.user.usuario, object=serializer.validated_data['object'])
+        if comentario.exists():
+            comentario = comentario.first()
+            comentario.comment = serializer.validated_data['comment']
+            comentario.save(update_fields=['comment'])
+        else:
+            self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+class ViewUserComment(generics.RetrieveAPIView):
+    serializer_class = ComentarioSerializer
+    permission_classes = (IsAuthenticated, )
+    lookup_url_kwarg = 'id'
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object(request)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    def get_object(self, request):
+        objid = self.kwargs.get(self.lookup_url_kwarg)
+        objeto = Comentario.objects.filter(user=self.request.user.usuario, object__id=objid)
+        if not objeto.exists():
+            raise Http404
+        else:
+            return objeto.first()
+
+class ViewAllObjectComments(generics.ListAPIView):
+    serializer_class = ComentarioSerializer
+    pagination_class = CommentPagination
+    lookup_url_kwarg = 'id'
+
+    def get_queryset(self):
+        id = self.kwargs.get(self.lookup_url_kwarg)
+        return Comentario.objects.filter(object__id=id)
+
+
+class CreateNewValoracionView(generics.CreateAPIView):
+    serializer_class = ValoracionSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # Verifiquemos que no existe ya de este usario para este objeto
+        valoracion = Valoracion.objects.filter(user=self.request.user.usuario,
+                                               object=serializer.validated_data['object'])
+        if valoracion.exists():
+            valoracion = valoracion.first()
+            valoracion.comment = serializer.validated_data['points']
+            valoracion.save(update_fields=['points'])
+        else:
+            self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 '''
 DB Operations view

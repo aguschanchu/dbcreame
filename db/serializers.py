@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 import datetime
-from .models import Objeto, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio
+from .models import Objeto, Categoria, Tag, Usuario, ObjetoPersonalizado, Compra, ArchivoSTL, Imagen, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio, Comentario, Valoracion
 from django.contrib.auth.models import User, AnonymousUser
 from django_mercadopago import models as MPModels
 from django.db.utils import IntegrityError
@@ -33,6 +33,29 @@ class ColorSerializer(serializers.ModelSerializer):
         model = Color
         fields = ('id','name','code','available','sfb_color_reference')
 
+class ComentarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comentario
+        fields = ('comment', 'object', 'name', 'creation_date')
+
+    name = serializers.CharField(required=False)
+
+    def create(self, validated_data):
+        user = self.context['request'].user.usuario
+        return Comentario.objects.create(user=user, **validated_data)
+
+
+class ValoracionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Valoracion
+        fields = '__all__'
+
+    def create(self, validated_data):
+        user = self.context['request'].user.usuario
+        return Valoracion.objects.create(user=user, **validated_data)
+
+
+
 class ObjetoSerializer(serializers.ModelSerializer):
     #images = serializers.StringRelatedField(many=True)
     #images = serializers.SlugRelatedField(many=True, read_only=True,slug_field='name')
@@ -57,6 +80,8 @@ class ObjetoSerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField('images_get')
     ar_model = ModeloArSerializer(source='modeloar')
     suggested_color = ColorSerializer()
+    comments = ComentarioSerializer(many=True)
+    points = serializers.FloatField()
 
     class Meta:
         depth = 4
@@ -64,7 +89,7 @@ class ObjetoSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'name_es', 'description', 'like_count', 'main_image', 'main_image_thumbnail', 'images',
          'files', 'author', 'creation_date', 'category', 'tags', 'external_id', 'liked',
          'hidden','ar_model','printing_time_default_total','suggested_color','discount','partial','origin',
-         'min_dimension', 'max_dimension')
+         'min_dimension', 'max_dimension', 'comments', 'points')
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
@@ -180,3 +205,4 @@ class AppSetupInformationSerializer(serializers.Serializer):
     price_per_hour = serializers.FloatField(read_only=True)
     discount_parameter_a = serializers.FloatField(read_only=True)
     discount_parameter_b = serializers.FloatField(read_only=True)
+

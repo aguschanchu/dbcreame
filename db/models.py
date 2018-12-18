@@ -16,13 +16,15 @@ import shutil
 import trimesh
 import googlemaps
 import unicodedata
+from numpy import mean
+from random import uniform
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save, pre_save, m2m_changed
 from django.dispatch import receiver
 from django.conf import settings
 from google.cloud import translate
 from django_mercadopago import models as MPModels
-from django.core.validators import MinLengthValidator
+from django.core.validators import MinLengthValidator, MinValueValidator, MaxValueValidator
 from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToFit
 
@@ -170,6 +172,8 @@ class Objeto(models.Model):
     origin = models.CharField(choices=origenes,max_length=30,null=True)
     #Fueron descargados los STL? (y objetos relacionados con este)
     partial = models.BooleanField(default=False)
+    #Review inicial, utilizada en caso
+    points_initial_value = models.FloatField(default=float(round(uniform(3.8, 4.5),2)))
 
     @property
     def main_image(self):
@@ -188,6 +192,17 @@ class Objeto(models.Model):
     @property
     def score(self):
         return score.score_object(self)
+
+    @property
+    def points(self):
+        if Valoracion.objects.filter(object=self).exists():
+            return mean([v.points for v in Valoracion.objects.filter(object=self)])
+        else:
+            return self.points_initial_value
+
+    @property
+    def comments(self):
+        return Comentario.objects.filter(object=self).order_by('creation_date')[:5]
 
     def suggested_color(self):
         if self.default_color != None:
@@ -220,15 +235,15 @@ class Objeto(models.Model):
         return round(sum([sum(a.time_as_a_function_of_scale.coefficients_list()) for a in self.files.all()]))
 
     def min_dimension(self):
-        if not self.partial:
+        try:
             return min([a.size_x_default for a in self.files.all()]+[a.size_y_default for a in self.files.all()]+[a.size_z_default for a in self.files.all()])
-        else:
+        except:
             return None
 
     def max_dimension(self):
-        if not self.partial:
+        try:
             return max([a.size_x_default for a in self.files.all()]+[a.size_y_default for a in self.files.all()]+[a.size_z_default for a in self.files.all()])
-        else:
+        except:
             return None
 
     @staticmethod
@@ -517,7 +532,7 @@ def update_suggested_color(sender, instance, created, **kwargs):
     if created:
         instance.object_id.update_popular_color()
 
-'''
+'''-
 Modelos de trackeo
 '''
 
@@ -531,3 +546,24 @@ class SfbRotationTracker(models.Model):
 def update_rotated_sfb(sender, instance, created, **kwargs):
     if created:
         instance.object.modeloar.calculate_rotated()
+
+'''
+Modelos de comentarios / valoraciones
+'''
+
+class Comentario(models.Model):
+    object = models.ForeignKey(Objeto, on_delete=models.CASCADE)
+    user = models.ForeignKey(Usuario, on_delete=models.CASCADE, blank=True)
+    comment = models.TextField()
+    creation_date = models.DateTimeField(default=timezone.now)
+
+    @property
+    def name(self):
+        return self.user.user.first_name
+
+
+class Valoracion(models.Model):
+    object = models.ForeignKey(Objeto, on_delete=models.CASCADE)
+    user = models.ForeignKey(Usuario, on_delete=models.CASCADE, blank=True)
+    points = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+

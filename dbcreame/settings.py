@@ -97,6 +97,9 @@ ROOT_URLCONF = 'dbcreame.urls'
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
+NOSE_ARGS = ['--nocapture',
+             '--nologcapture',]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

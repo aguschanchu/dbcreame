@@ -71,7 +71,39 @@ class TestOperations(APITransactionTestCase):
     def test_like_object(self):
         obj = Objeto.objects.first()
         url = reverse('db:like_object', kwargs={'id': obj.id})
-        response = self.client.put(url, format='json')
+        response = self.client.put(url, format='json').json()
         #Actualizamos el objeto
         obj = Objeto.objects.first()
         self.assertTrue(obj.like_count == 1)
+
+    def test_object_comments(self):
+        obj = Objeto.objects.first()
+        url = reverse('db:create_comment')
+        data = {'object': obj.id, 'comment': 'Este es un comentario muy relevante'}
+        response = self.client.post(url, data, format='json').json()
+        #Actualizamos el objeto
+        obj = Objeto.objects.first()
+        self.assertTrue(len(obj.comments) == 1)
+        #Ahora buscamos ese mismo comentario, con el endpoint pertinente
+        url = reverse('db:view_single_comment', kwargs={'id': obj.id})
+        response = self.client.get(url).json()
+        self.assertTrue(len(response) > 1)
+
+    def test_review(self):
+        obj = Objeto.objects.first()
+        #Antes de postear una review, veamos que no hay problema con el puntaje inicial
+        url = reverse('db:search_object_by_id', kwargs={'id': obj.id})
+        response = self.client.get(url).json()
+        self.assertTrue(response['points'] > 1)
+        url = reverse('db:create_review')
+        data = {'object': obj.id, 'points': 5}
+        response = self.client.post(url, data, format='json').json()
+        #Buscamos el objeto por ID, y veamos nuestra solida review
+        url = reverse('db:search_object_by_id', kwargs={'id': obj.id})
+        response = self.client.get(url).json()
+        self.assertTrue(response['points'] == 5)
+
+
+
+
+
