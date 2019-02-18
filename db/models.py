@@ -195,14 +195,14 @@ class Objeto(models.Model):
 
     @property
     def points(self):
-        if Valoracion.objects.filter(object=self).exists():
-            return mean([v.points for v in Valoracion.objects.filter(object=self)])
+        if Valoracion.objects.filter(object_id=self).exists():
+            return mean([v.points for v in Valoracion.objects.filter(object_id=self)])
         else:
             return self.points_initial_value
 
     @property
     def comments(self):
-        return Comentario.objects.filter(object=self).order_by('creation_date')[:5]
+        return Comentario.objects.filter(object_id=self).order_by('creation_date')[:5]
 
     def suggested_color(self):
         if self.default_color != None:
@@ -552,7 +552,7 @@ Modelos de comentarios / valoraciones
 '''
 
 class Comentario(models.Model):
-    object = models.ForeignKey(Objeto, on_delete=models.CASCADE)
+    object_id = models.ForeignKey(Objeto, on_delete=models.CASCADE)
     user = models.ForeignKey(Usuario, on_delete=models.CASCADE, blank=True)
     comment = models.TextField()
     creation_date = models.DateTimeField(default=timezone.now)
@@ -563,7 +563,7 @@ class Comentario(models.Model):
 
 
 class Valoracion(models.Model):
-    object = models.ForeignKey(Objeto, on_delete=models.CASCADE)
+    object_id = models.ForeignKey(Objeto, on_delete=models.CASCADE)
     user = models.ForeignKey(Usuario, on_delete=models.CASCADE, blank=True)
     points = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
 

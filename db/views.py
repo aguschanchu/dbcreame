@@ -127,7 +127,7 @@ class ListAllOrdersView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Compra.objects.filter(Q(buyer=user.usuario) & ~Q(status='checkout-pending'))
+        return Compra.objects.filter(Q(buyer=user.usuario))
 
 class GetPreferenceInfoFromMP(APIView):
     def post(self, request, mpid, format=None):
@@ -275,7 +275,7 @@ class CreateNewCommentView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         #Verifiquemos que no existe ya el comentario de este usario para este objeto
-        comentario = Comentario.objects.filter(user=self.request.user.usuario, object=serializer.validated_data['object'])
+        comentario = Comentario.objects.filter(user=self.request.user.usuario, object_id=serializer.validated_data['object_id'])
         if comentario.exists():
             comentario = comentario.first()
             comentario.comment = serializer.validated_data['comment']
@@ -297,7 +297,7 @@ class ViewUserComment(generics.RetrieveAPIView):
 
     def get_object(self, request):
         objid = self.kwargs.get(self.lookup_url_kwarg)
-        objeto = Comentario.objects.filter(user=self.request.user.usuario, object__id=objid)
+        objeto = Comentario.objects.filter(user=self.request.user.usuario, object_id__id=objid)
         if not objeto.exists():
             raise Http404
         else:
@@ -310,7 +310,7 @@ class ViewAllObjectComments(generics.ListAPIView):
 
     def get_queryset(self):
         id = self.kwargs.get(self.lookup_url_kwarg)
-        return Comentario.objects.filter(object__id=id)
+        return Comentario.objects.filter(object_id__id=id)
 
 
 class CreateNewValoracionView(generics.CreateAPIView):
@@ -322,10 +322,10 @@ class CreateNewValoracionView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         # Verifiquemos que no existe ya de este usario para este objeto
         valoracion = Valoracion.objects.filter(user=self.request.user.usuario,
-                                               object=serializer.validated_data['object'])
+                                               object_id=serializer.validated_data['object_id'])
         if valoracion.exists():
             valoracion = valoracion.first()
-            valoracion.comment = serializer.validated_data['points']
+            valoracion.points = serializer.validated_data['points']
             valoracion.save(update_fields=['points'])
         else:
             self.perform_create(serializer)

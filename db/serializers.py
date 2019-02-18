@@ -36,7 +36,7 @@ class ColorSerializer(serializers.ModelSerializer):
 class ComentarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comentario
-        fields = ('comment', 'object', 'name', 'creation_date')
+        fields = ('comment', 'object_id', 'name', 'creation_date')
 
     name = serializers.CharField(required=False)
 
