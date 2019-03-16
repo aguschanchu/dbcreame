@@ -32,7 +32,7 @@ def convert(stlpath,name,rotate=False):
     #Guardamos el STL transformado
     stl_path = settings.BASE_DIR + '/tmp/' + name.split('/')[-1].split('.')[0] + '.stl'
     with open(stl_path,'wb') as f:
-        f.write(trimesh.io.stl.export_stl(mesh))
+        f.write(trimesh.exchange.stl.export_stl(mesh))
     #Convertimos el stl a obj usando assimp
     obj_path = settings.BASE_DIR + '/tmp/' + name.split('/')[-1].split('.')[0] + '.obj'
     args = ['assimp', 'export', stl_path, obj_path]
@@ -106,5 +106,5 @@ def combine_stl_with_correct_coordinates(objeto):
     meshes = [trimesh.load_mesh(settings.BASE_DIR + a.file.url) for a in objeto.object.files.all()]
     mesh = trimesh.util.concatenate(meshes)
     filename = objeto.object.name
-    new_file = ContentFile(trimesh.io.stl.export_stl(mesh))
+    new_file = ContentFile(trimesh.exchange.stl.export_stl(mesh))
     return new_file
