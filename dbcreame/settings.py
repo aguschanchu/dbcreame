@@ -246,3 +246,6 @@ VISION_RESULTS_AMOUNT = 10
 
 #Configuraciones de precios
 PRECIO_POR_HORA_DE_IMPRESION = 40
+
+#Configuracion de conexion
+USE_SCAPOXY = True

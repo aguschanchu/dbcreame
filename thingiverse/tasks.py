@@ -12,7 +12,7 @@ from django.conf import settings
 import json
 import urllib3
 from urllib3.util import Retry
-from urllib3 import PoolManager, Timeout
+from urllib3 import PoolManager, ProxyManager, Timeout
 from urllib3.exceptions import MaxRetryError, TimeoutError
 import pickle
 urllib3.disable_warnings()
@@ -26,13 +26,23 @@ from .filters.things_files_filter import thing_files_filter
 from celery.utils.log import get_task_logger
 logger = get_task_logger(__name__)
 
+
+def get_connection_pool():
+    retry_policy = Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501)))
+    timeout_policy = Timeout(read=10, connect=5)
+
+    if settings.USE_SCAPOXY:
+        http = ProxyManager('http://localhost:8888', retries= retry_policy, timeout = timeout_policy)
+    else:
+        http = PoolManager(retries= retry_policy, timeout = timeout_policy)
+
+    return http
+
 @shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
 def request_from_thingi(url,content=False,params=''):
     global logger
     endpoint = settings.THINGIVERSE_API_ENDPOINT
-    http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501))),
-                       timeout = Timeout(read=10, connect=5)
-                       )
+    http = get_connection_pool()
     for _ in range(0,60):
         k = ApiKey.get_api_key()
         try:
@@ -90,8 +100,7 @@ def get_thing_categories_list(thingiid):
 
 @shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
 def download_file(url, thingiid = None):
-    http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(400, 501))),
-                       timeout=Timeout(connect=5))
+    http = get_connection_pool()
     path = 'tmp/'+''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + '.stl'
     try:
         with open(path,'wb') as file:
@@ -514,18 +523,31 @@ def add_objects(max_things,start_page=0):
     #Funcion para popular la base de datos
     thing_counter = 0
     page_counter = start_page
+    things_to_add = []
     while thing_counter < max_things:
         page_counter += 1
-        r = request_from_thingi('/popular',False,'&page={}'.format(page_counter))
+        try:
+            r = request_from_thingi('/popular',False,'&page={}'.format(page_counter))
+        except:
+            r = []
+            time.sleep(2)
         for item in r:
             try:
-                add_object_from_thingiverse(item['id'])
-                thing_counter += 1
+                if not modelos.ReferenciaExterna.objects.filter(external_id=item['id']).exists():
+                    things_to_add.append(item['id'])
+                    thing_counter += 1
             except:
                 traceback.print_exc()
                 time.sleep(2)
                 print('Error al agregar objeto: {}'.format(item['id']))
         print('Contador: {}'.format(thing_counter))
+    for x in things_to_add:
+        try:
+            ObjetoThingi.objects.create_object(x, partial=False, origin='vision')
+        except:
+            traceback.print_exc()
+            time.sleep(2)
+            print('Error al agregar objeto: {}'.format(item['id']))
 
 def import_from_thingiverse_parser(base):
     '''
@@ -534,7 +556,7 @@ def import_from_thingiverse_parser(base):
     base = pickle.load(base)
     for thing in base:
         try:
-            add_object_from_thingiverse(thing['thing_id'],file_list = thing['thing_files_id'])
+            ObjetoThingi.objects.create_object(thing['thing_id'], partial=False, origin='human', file_list=thing['thing_files_id'])
         except:
             traceback.print_exc()
             time.sleep(2)
