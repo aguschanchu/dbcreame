@@ -63,7 +63,7 @@ class ObjetoThingiManager(models.Manager):
     def update_object(self, object_id, file_list=None, update_object=True, partial=False, subtask_ids_list = None, origin = None):
         from . import tasks
         object = self.create(object_id=object_id,external_id=object_id.external_id.external_id, file_list=file_list, partial=partial, update_object=update_object, origin=origin)
-        job = tasks.add_files_to_thingiverse_object.apply_async([object_id.id], file_list, priority=ObjetoThingi.priority_def(origin))
+        job = tasks.add_files_to_thingiverse_object.s([object_id.id], file_list).apply_async(priority=ObjetoThingi.priority_def(origin))
         object.celery_id = job.id
         object.save(update_fields=['celery_id','external_id'])
         return object

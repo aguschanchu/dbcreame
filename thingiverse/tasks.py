@@ -348,7 +348,7 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
                         name = thing_file['name']
                         if any(s in name.lower() for s in allowed_extensions):
                             download_url = thing_file['download_url']
-                            st = download_file.delay(download_url+'?access_token='+ApiKey.get_api_key(), thingiid = thing_file['id'], priority = task.priority_get)
+                            st = download_file.s(download_url+'?access_token='+ApiKey.get_api_key(), thingiid = thing_file['id']).apply_async(priority = task.priority_get)
                             ObjetoThingiSubtask.objects.create(parent_task=task, celery_id=st.id)
             else:
                 raise self.retry(countdown=5)
