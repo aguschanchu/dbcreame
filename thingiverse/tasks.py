@@ -157,7 +157,7 @@ def add_object_from_thingiverse_chain(thingiid, file_list = None, debug = True, 
         res |= add_files_to_thingiverse_object.s(file_list)
     return res
 
-@shared_task(bind=True,autoretry_for=(TypeError,ValueError,KeyError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http', bind=True,autoretry_for=(TypeError,ValueError,KeyError), retry_backoff=True, max_retries=50)
 def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
     global logger
     print("Iniciando descarga de "+str(thingiid))
