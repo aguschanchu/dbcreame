@@ -14,6 +14,9 @@ app = Celery('dbcreame')
 #   should have a `CELERY_` prefix.
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
+# Priorities configuration
+app.conf.task_queue_max_priority = 10
+
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
 

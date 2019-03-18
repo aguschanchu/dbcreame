@@ -14,8 +14,8 @@ from urllib3.exceptions import MaxRetryError
 '''
 A partir de una imagen, ejecuta las tareas de importacion para los resultados de busqueda
 '''
-@shared_task(bind=True, max_retries=50, retry_backoff=True)
-def process_image(self,id):
+@shared_task(queue='vision', bind=True, max_retries=50, retry_backoff=True)
+def process_image(self, id):
     objeto = modelos.ImagenVisionAPI.objects.get(pk=id)
     client = gvision.ImageAnnotatorClient()
     image_path = settings.BASE_DIR + objeto.image.url
@@ -60,7 +60,8 @@ def process_image(self,id):
 
     return True
 
-@shared_task(bind=True, max_retries=50, retry_backoff=True)
+
+@shared_task(queue='vision', bind=True, max_retries=50, retry_backoff=True)
 def search_tag_in_thingiverse(self, search_id, tag, search_amount, score):
     objeto = modelos.ImagenVisionAPI.objects.get(pk=search_id)
     r = request_from_thingi('search/{}'.format(tag))

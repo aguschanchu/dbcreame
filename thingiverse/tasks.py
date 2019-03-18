@@ -321,7 +321,7 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
         print("Preparando archivos")
         rfiles = request_from_thingi('things/{}/files'.format(thingiid))
         files_available_id = [a['id'] for a in rfiles]
-        if file_list == None or file_list == []:
+        if file_list is None or file_list == []:
             file_list = files_available_id
         ### Nos pasaron una lista de archivos valida?
         for id in file_list:
@@ -348,7 +348,7 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
                         name = thing_file['name']
                         if any(s in name.lower() for s in allowed_extensions):
                             download_url = thing_file['download_url']
-                            st = download_file.delay(download_url+'?access_token='+ApiKey.get_api_key(), thingiid = thing_file['id'])
+                            st = download_file.delay(download_url+'?access_token='+ApiKey.get_api_key(), thingiid = thing_file['id'], priority = task.priority_def)
                             ObjetoThingiSubtask.objects.create(parent_task=task, celery_id=st.id)
             else:
                 raise self.retry(countdown=5)
@@ -543,7 +543,7 @@ def add_objects(max_things,start_page=0):
         print('Contador: {}'.format(thing_counter))
     for x in things_to_add:
         try:
-            ObjetoThingi.objects.create_object(x, partial=False, origin='vision')
+            ObjetoThingi.objects.create_object(x, partial=False, origin='popular')
         except:
             traceback.print_exc()
             time.sleep(2)

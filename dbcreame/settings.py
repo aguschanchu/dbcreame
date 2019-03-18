@@ -229,7 +229,7 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_SOFT_TIME_LIMIT = 600*3
 CELERY_CHORD_UNLOCK_MAX_RETRIES = 60
 CELERY_PREFETCH_MULTIPLIER = 1
-CELERY_QUEUES = ('http','celery','low_priority')
+CELERY_QUEUES = ('http', 'celery', 'low_priority', 'vision')
 
 #Configuraciones adicionales
 SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'

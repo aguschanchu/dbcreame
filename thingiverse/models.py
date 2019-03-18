@@ -52,22 +52,31 @@ class QueryEvent(models.Model):
 
 class ObjetoThingiManager(models.Manager):
 
+    @staticmethod
+    def priority_def(origin):
+        if origin in ['vision', 'human', 'app']:
+            return 9
+        else:
+            return 3
+
     def create_object(self, external_id, file_list=None, partial=False, origin=None, update_object=False, subtask_ids_list = None):
         from . import tasks
         object = self.create(external_id=external_id, file_list=file_list, partial=partial)
         # Ejecutamos la tarea
-        job = tasks.add_object_from_thingiverse_chain(thingiid=external_id, file_list=file_list, partial=partial, origin=origin).apply_async(max_retries=300)
+        job = tasks.add_object_from_thingiverse_chain(thingiid=external_id, file_list=file_list, partial=partial, origin=origin).apply_async(max_retries=300, priority=self.priority_def(origin))
         object.celery_id = job.id
         object.save(update_fields=["celery_id"])
         return object
 
-    def update_object(self, object_id, file_list=None, update_object=True, partial=False, subtask_ids_list = None):
+    def update_object(self, object_id, file_list=None, update_object=True, partial=False, subtask_ids_list = None, origin = None):
         from . import tasks
-        object = self.create(object_id=object_id,external_id=object_id.external_id.external_id, file_list=file_list, partial=partial, update_object=update_object)
-        job = tasks.add_files_to_thingiverse_object.delay([object_id.id], file_list)
+        object = self.create(object_id=object_id,external_id=object_id.external_id.external_id, file_list=file_list, partial=partial, update_object=update_object, origin=origin)
+        job = tasks.add_files_to_thingiverse_object.apply_async([object_id.id], file_list, priority=self.priority_def(origin))
         object.celery_id = job.id
         object.save(update_fields=['celery_id','external_id'])
         return object
+
+
 
 class ObjetoThingi(models.Model):
     estados = (
@@ -85,10 +94,14 @@ class ObjetoThingi(models.Model):
     celery_id = models.CharField(max_length=100,blank=True)
     object_id = models.ForeignKey('db.Objeto',null=True,on_delete=models.SET_NULL)
     partial = models.BooleanField(default=True)
-    origin = models.CharField(max_length=200,blank=True,null=True)
+    origin = models.CharField(max_length=200, blank=True, null=True)
     update_object = models.BooleanField(default=False)
 
     objects = ObjetoThingiManager()
+
+    @property
+    def priority_def(self):
+        return self.objects.priority_def(self.origin)
 
     def update_status(self):
         res = AsyncResult(self.celery_id)
