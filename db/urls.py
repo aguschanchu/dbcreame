@@ -22,7 +22,8 @@ path('list/object/', views.ListAllObjectsView.as_view()),
 path('list/category/', views.ListAllCategoriesView.as_view()),
 path('list/tag/', views.ListAllTagsView.as_view()),
 path('list/orders/', views.ListAllOrdersView.as_view()),
-path('list/colors/',views.ListAllColorsView.as_view()),
+path('list/colors/', views.ListAllColorsView.as_view()),
+path('list/liked_objects/', views.ListLikedObjects.as_view())
 ]
 #Operations
 urlpatterns += [

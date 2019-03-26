@@ -116,6 +116,14 @@ class ListAllColorsView(generics.ListAPIView):
     serializer_class = ColorSerializer
     queryset = Color.objects.all()
 
+class ListLikedObjects(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ObjetoSerializer
+    pagination_class = ObjectPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        return user.usuario.liked_objects.all()
 
 '''
 Orders views
