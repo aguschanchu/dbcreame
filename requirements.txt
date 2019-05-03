@@ -21,3 +21,4 @@ django_celery_results
 googlemaps
 django-request-logging
 django-imagekit
+eventlet
