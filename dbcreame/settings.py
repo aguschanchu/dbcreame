@@ -246,6 +246,8 @@ VISION_RESULTS_AMOUNT = 10
 
 #Configuraciones de precios
 PRECIO_POR_HORA_DE_IMPRESION = 40
+SHIPNOW_API_URL = 'https://api.shipnow.com.ar/shipping_services/default?weight=1000&to_zip_code='
+
 
 #Configuracion de conexion
 USE_SCAPOXY = True

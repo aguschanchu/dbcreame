@@ -27,6 +27,8 @@ from django_mercadopago import models as MPModels
 from django.core.validators import MinLengthValidator, MinValueValidator, MaxValueValidator
 from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToFit
+from db.tools import price_calculator
+import mercadopago
 
 
 '''
@@ -96,7 +98,7 @@ def translate_tag_signal(sender, instance, created, **kwargs):
 
 class Polinomio(models.Model):
     #Polinomio en forma p(x) = \sum^0_{n=0} a_n x^n
-    a0 = models.FloatField(default=0)
+    a0 = models.FloatField(default=None, null=True)
     a1 = models.FloatField(default=0)
     a2 = models.FloatField(default=0)
     a3 = models.FloatField(default=0)
@@ -106,6 +108,10 @@ class Polinomio(models.Model):
 
     def __str__(self):
         return "{} x^5+ {} x^4+ {} x^3+ {} x^2+ {} x+ {}".format(self.a5,self.a4,self.a3,self.a2,self.a1,self.a0)
+
+    @property
+    def ready(self):
+        return self.a0 != None
 
     def coefficients_list(self):
         return [self.a5,self.a4,self.a3,self.a2,self.a1,self.a0]
@@ -271,7 +277,7 @@ class ArchivoSTL(models.Model):
     file = models.FileField(upload_to='stl/')
     object = models.ForeignKey(Objeto,blank=True,null=True,on_delete=models.CASCADE,related_name='files')
     #Tiempo de impresion en escala 1, en segundos
-    printing_time_default = models.IntegerField(default=0)
+    printing_time_default = models.IntegerField(default=None, null=True)
     time_as_a_function_of_scale = models.ForeignKey(Polinomio,on_delete=models.SET_NULL,null=True)
     #Dimensiones del objeto en escala 1, en mm
     size_x_default = models.FloatField(default=10)
@@ -279,9 +285,15 @@ class ArchivoSTL(models.Model):
     size_z_default = models.FloatField(default=10)
     #Peso del objeto en escala 1, en g
     weight_default = models.FloatField(default=10)
+    #Identificador de trabajo en SlicerAPI
+    slicer_job_id = models.IntegerField(null=True)
 
     def __str__(self):
         return self.file.name
+
+    @property
+    def ready(self):
+        return self.printing_time_default != None
 
     def name(self):
         return self.file.name
@@ -459,26 +471,29 @@ def update_object_like_count(sender, **kwargs):
 class DireccionDeEnvio(models.Model):
     #Corresponde al place_id de gmaps
     gmaps_id = models.CharField(max_length=150)
-    notes = models.CharField(max_length=300,blank=True,default=None,null=True)
+    notes = models.CharField(max_length=300,blank=True, default=None, null=True)
     usuario = models.ForeignKey(Usuario,on_delete=models.CASCADE,related_name='address_book')
-    last_time_used = models.DateTimeField(default=timezone.now,blank=True)
+    last_time_used = models.DateTimeField(default=timezone.now, blank=True)
     #Cacheamos la direccion para evitar queries al pedo
-    long_address = models.CharField(max_length=300,default=None,null=True)
+    long_address = models.CharField(max_length=300,default=None, null=True)
+    postal_code = models.CharField(max_length=10, default=None, null=True)
 
     class Meta:
         ordering = ['last_time_used']
 
     #Obtenemos la long_address de googlemaps
-    def update_long_address(self):
+    def update_long_address_and_postal_code(self):
         client = googlemaps.Client(key=settings.GOOGLE_MAPS_API_KEY)
-        result = client.reverse_geocode(self.gmaps_id)[0]['formatted_address']
-        self.long_address = result
-        self.save(update_fields=['long_address'])
+        result = client.reverse_geocode(self.gmaps_id)[0]
+        self.long_address = result['formatted_address']
+        self.postal_code = ''.join(filter(lambda x: x.isdigit(), [x['long_name'] for x in result['address_components'] if 'postal_code' in x['types']][0]))
+        self.save(update_fields=['long_address', 'postal_code'])
 
     def short_address(self):
         if not self.long_address:
             self.update_long_address()
         return self.long_address.split(',')[0]
+
 
 class Compra(models.Model):
     estados = (
@@ -488,7 +503,7 @@ class Compra(models.Model):
         ('printing', 'Imprimiendo'),
         ('shipped', 'Enviado'),
         ('completed', 'Completado'),
-        ('canceled', 'Cancelado'),
+        ('cancelled', 'Cancelado'),
         ('error' , 'Error')
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,blank=True)
@@ -496,7 +511,25 @@ class Compra(models.Model):
     date = models.DateTimeField(default=timezone.now,blank=True)
     status = models.CharField(choices=estados,max_length=300,blank=True,default='checkout-pending')
     delivery_address = models.ForeignKey(DireccionDeEnvio,null=True,on_delete=models.SET_NULL,blank=True)
-    payment_preferences = models.OneToOneField(MPModels.Preference,on_delete=models.CASCADE,blank=True,null=True)
+    payment_preferences = models.OneToOneField(MPModels.Preference,on_delete=models.CASCADE, blank=True, null=True)
+
+    def create_payment_preference(self):
+        # Creamos la preferencia de pago de MP
+        precio_total = price_calculator.get_order_price(self) + price_calculator.get_shipping_price(self)
+        mp_account = MPModels.Account.objects.first()
+        self.payment_preferences = MPModels.Preference.objects.create(
+            title='Compra del {}'.format(self.date),
+            price=precio_total,
+            description='Compra en Creame3D',
+            reference=str(self.id),
+            account=mp_account)
+        # MP requiere email y nombre del comprador, de modo, que ingresamos esos datos
+        mp_client = mercadopago.MP(mp_account.app_id, mp_account.secret_key)
+        user = self.buyer.user
+        preference = {
+            'payer': {'email': user.email if user.email != '' else 'compras@creame3d.com', 'name': user.username}}
+        preferenceResult = mp_client.update_preference(self.payment_preferences.mp_id, preference)
+        self.save()
 
 @receiver(post_save, sender=MPModels.Preference)
 def check_mp_for_payment_status(sender, instance, created, **kwargs):

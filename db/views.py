@@ -155,23 +155,9 @@ class CreateOrderView(generics.CreateAPIView):
         #Asignamos el comprador
         user = request.user
         compra.buyer = user.usuario
-        #Creamos la preferencia de pago de MP
-        precio_total = price_calculator.get_order_price(compra)
-        mp_account = MPModels.Account.objects.first()
-        compra.payment_preferences = MPModels.Preference.objects.create(
-            title='Compra del {}'.format(compra.date),
-            price=precio_total,
-            description='Compra en Creame3D',
-            reference=str(compra.id),
-            account=mp_account)
-        #MP requiere email y nombre del comprador, de modo, que ingresamos esos datos
-        mp_client = mercadopago.MP(mp_account.app_id, mp_account.secret_key)
-        preference = {'payer': {'email': user.email if user.email != '' else 'compras@creame3d.com','name':user.username}}
-        preferenceResult = mp_client.update_preference(compra.payment_preferences.mp_id, preference)
+        compra.create_payment_preference()
         #Devolvemos el resultado
-        compra.save()
         serializer = self.get_serializer(compra)
-        print('asd')
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data)
 

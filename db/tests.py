@@ -42,12 +42,16 @@ class TestOperations(APITransactionTestCase):
                 'delivery_address':
                     {'gmaps_id': 'ChIJP2unpHu1vJUR4HQAhsGujOQ',
                     'notes': 'Notas muy importantes'
-                    }
+                    },
+                'buyer':
+                    {'first_name': 'tuvi'}
+
                 }
         response = self.client.post(url, data, format='json').json()
         id = response['id']
         #Creo la preferencia?
         self.assertTrue(MPModels.Preference.objects.count() > 0)
+        return True
         #TODO: Automatizar lo siguiente con selenium
         #Vamos a pedirle al user que pague la preferencia
         print("Necesito que pagues la preferencia de pago. Usa estas credenciales:")

@@ -1,5 +1,6 @@
 from django.conf import settings
 import numpy as np
+import requests
 
 def segundos_a_pesos(segs):
     horas_de_impresion = segs/3600
@@ -7,6 +8,16 @@ def segundos_a_pesos(segs):
     precio = (20*horas_de_impresion+5*min(horas_de_impresion,5)+5*min(horas_de_impresion,15)+5*min(horas_de_impresion,25)+5*min(horas_de_impresion,35))
     #Aplicamos el descuento en volumen precio_c_descuento = a*(precio_sin_descuento)^b
     return precio
+
+def get_shipping_price(compra):
+    if compra.delivery_address.postal_code is None:
+        compra.delivery_address.update_long_address_and_postal_code()
+    try:
+        r = requests.get(settings.SHIPNOW_API_URL.format(compra.delivery_address.postal_code),
+                         timeout=20).json()
+        return r['price']
+    except:
+        return 200
 
 def get_order_price(compra):
     total_price = 0
