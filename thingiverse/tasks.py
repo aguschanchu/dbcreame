@@ -539,7 +539,7 @@ def add_objects(max_things,start_page=0):
             except:
                 traceback.print_exc()
                 time.sleep(2)
-                print('Error al agregar objeto: {}'.format(item['id']))
+                print('Error al agregar objeto:')
         print('Contador: {}'.format(thing_counter))
     for x in things_to_add:
         try:

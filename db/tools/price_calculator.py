@@ -1,6 +1,23 @@
 from django.conf import settings
 import numpy as np
-import requests
+import json
+import urllib3
+from urllib3.util import Retry
+from urllib3 import PoolManager, ProxyManager, Timeout
+from urllib3.exceptions import MaxRetryError, TimeoutError
+urllib3.disable_warnings()
+
+
+from celery.utils.log import get_task_logger
+logger = get_task_logger(__name__)
+
+
+def get_connection_pool():
+    retry_policy = Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501)))
+    timeout_policy = Timeout(read=10, connect=5)
+    http = PoolManager(retries= retry_policy, timeout = timeout_policy)
+
+    return http
 
 def segundos_a_pesos(segs):
     horas_de_impresion = segs/3600
@@ -13,8 +30,8 @@ def get_shipping_price(compra):
     if compra.delivery_address.postal_code is None:
         compra.delivery_address.update_long_address_and_postal_code()
     try:
-        r = requests.get(settings.SHIPNOW_API_URL.format(compra.delivery_address.postal_code),
-                         timeout=20).json()
+        http = get_connection_pool()
+        r = json.loads(http.request('GET', settings.SHIPNOW_API_URL.format(zip=compra.delivery_address.postal_code)).data.decode('utf-8'))
         return r['price']
     except:
         return 200
