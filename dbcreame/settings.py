@@ -251,4 +251,4 @@ SHIPNOW_API_URL = 'https://api.shipnow.com.ar/shipping_services/default?weight=1
 
 
 #Configuracion de conexion
-USE_SCAPOXY = True
+USE_SCAPOXY = False

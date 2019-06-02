@@ -171,8 +171,10 @@ class AtributoExterno(models.Model):
     download_count = models.IntegerField(default=0)
     added = models.DateTimeField(default=timezone.now)
     original_file_count = models.IntegerField(default=0)
-    #Paso el filtro?
+    # Paso el filtro de things?
     filter_passed = models.BooleanField(default=True)
+    # Pasamos el filtro de archivos sobre la lista actual?
+    files_filter_passed = models.NullBooleanField(default=None)
 
 
 '''
@@ -184,7 +186,6 @@ class InformacionThingi(models.Model):
     original_filename = models.CharField(max_length=300)
     date = models.DateTimeField(default=timezone.now,blank=True)
     thingi_id = models.IntegerField(default=0)
-    #Paso el filtro?
     filter_passed = models.NullBooleanField(default=None)
 
 
@@ -212,9 +213,7 @@ class InformacionMesh(models.Model):
 
     @staticmethod
     def informacion_mesh_de_archivo_stl(archivo_stl: modelos.ArchivoSTL):
-        with archivo_stl.file.file as file:
-            mesh = trimesh.load_mesh(file.open(mode='rb'),file_type='stl')
-            file.close()
+        mesh = trimesh.load_mesh(archivo_stl.model.get_model_path())
         mesh_data = InformacionMesh()
         mesh_data.bounding_box_x, mesh_data.bounding_box_y, mesh_data.bounding_box_z = mesh.bounding_box_oriented.primitive.extents
         mesh_data.area = mesh.area

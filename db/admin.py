@@ -14,7 +14,7 @@ class CategoriaAdmin(admin.ModelAdmin):
 
 @admin.register(ArchivoSTL)
 class ArchivoSTLAdmin(admin.ModelAdmin):
-    list_display = ('name', 'printing_time_default', 'time_as_a_function_of_scale', 'size_x_default',
+    list_display = ('printing_time_default', 'time_as_a_function_of_scale', 'size_x_default',
     'size_y_default', 'size_z_default', 'weight_default')
     search_fields = ('name', )
 
@@ -100,7 +100,10 @@ class ObjetoAdmin(admin.ModelAdmin):
         )
 
     def total_printing_time_default(self,obj):
-        return int(sum([o.printing_time_default for o in ArchivoSTL.objects.filter(object=obj)])/60**2)
+        try:
+            return round(sum([o.printing_time_default for o in ArchivoSTL.objects.filter(object=obj)])/60**2, 2)
+        except:
+            return 0
 
     def human_flag(self,obj):
         return obj.modeloar.human_flag

@@ -22,3 +22,4 @@ django-request-logging
 django-imagekit
 eventlet
 shapely
+django-prettyjson

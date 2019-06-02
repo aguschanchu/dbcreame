@@ -17,7 +17,7 @@ def render_image(armodel):
     with open(script_dir,'w') as dest:
         with open('db/render/blender_script_base.py','r') as source:
             for line in source.readlines():
-                line = line.replace('MODEL_PATH',"'"+settings.BASE_DIR+armodel.combined_stl.url+"'")
+                line = line.replace('MODEL_PATH',"'"+armodel.combined_stl.path+"'")
                 line = line.replace('OUTPUT_PATH',"'"+output_png+"'")
                 dest.write(line)
     #Corremos Blender

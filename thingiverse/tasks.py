@@ -21,8 +21,8 @@ from celery.exceptions import SoftTimeLimitExceeded, MaxRetriesExceededError
 import dateutil.parser
 from .filters.things_filter import *
 from .filters.things_files_filter import thing_files_filter
-
-
+from slaicer.models import GeometryModel, SliceJob
+import numpy as np
 from celery.utils.log import get_task_logger
 logger = get_task_logger(__name__)
 
@@ -298,9 +298,42 @@ def apply_thing_filter(object_id):
 
     return object_id
 
-@shared_task(bind=True,autoretry_for=(TypeError,ValueError,MaxRetryError,ConnectionResetError), retry_backoff=True, max_retries=50)
+@shared_task(bind=True, max_retries=50)
+def apply_thing_objects_filter(self, object_id):
+    try:
+        objeto = modelos.Objeto.objects.get(pk=object_id)
+        extattr = objeto.external_id.thingiverse_attributes
+    except:
+        raise ValueError("Error al recuperar el archivo {}".format(object_id))
+
+    # Necesitamos que esten todos los archivos cotizados, para lanzar este filtro
+    for f in objeto.files.all():
+        if not f.quote_ready():
+            raise self.retry(countdown=5)
+
+    file_list_modified = False
+    # Aplicamos el filtro de archivos
+    if objeto.origin != 'human':
+        thing_files_filter(objeto)
+        ## Borramos los archivos que no pasaron el filtro
+        for f in objeto.files.all():
+            if f.informacionthingi.filter_passed == False:
+                f.object = None
+                file_list_modified = True
+                f.save(update_fields=['object'])
+
+    # Tenemos que regenerar los sfb, si modificamos la lista de archivos
+    if file_list_modified:
+        objeto.modeloar.create_sfb(generate=True, force_generation=True)
+
+    extattr.files_filter_passed = True
+    extattr.save(update_fields=['files_filter_passed'])
+
+    return object_id
+
+@shared_task(bind=True, autoretry_for=(MaxRetryError, ConnectionResetError), retry_backoff=True, max_retries=50)
 def add_files_to_thingiverse_object(self, object_id, file_list = None, override = False, debug = True):
-        allowed_extensions = ['.stl']
+        allowed_extensions = ['.stl', '.obj']
         try:
             objeto = modelos.Objeto.objects.get(pk=object_id[0])
         except:
@@ -351,173 +384,78 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
                             st = download_file.s(download_url+'?access_token='+ApiKey.get_api_key(), thingiid = thing_file['id']).apply_async(priority = task.priority_get)
                             ObjetoThingiSubtask.objects.create(parent_task=task, celery_id=st.id)
             else:
+                print("Los archivos no estan listos, comprobamos en 5s nuevamente")
                 raise self.retry(countdown=5)
-                return False
 
         ### Termino el grupo de trabajo?
         if task.update_subtask_status() == False:
+            print("Los archivos no estan listos, comprobamos en 5s nuevamente")
             raise self.retry(countdown=5)
-            return False
 
         ### Ok, termino. Agregamos los archivos al objeto, y continuamos
         archivos_link = task.update_subtask_status()
-        archivos = []
+        print('Tenemos esta lista de archivos descargados:')
+        print(archivos_link)
         for link in archivos_link:
-            try:
-                with open(link[0],'rb') as file:
-                    archivo = modelos.ArchivoSTL()
-                    archivo.file.save(objeto.external_id.repository+'-'+str(objeto.external_id.external_id)+'.stl',File(file))
+            with open(link[0], 'rb') as file:
+                #Guardamos los campos adicionales que requiere el filtro
+                info = InformacionThingi()
+                for f in rfiles:
+                    if f['id'] == link[1]:
+                        info.original_filename = f['name']
+                        info.date = dateutil.parser.parse(f['date'])
+                        info.save()
+                        info.thingi_id = link[1]
+                        break
 
-                    #Guardamos los campos adicionales que requiere el filtro
-                    info = InformacionThingi()
-                    for f in rfiles:
-                        if f['id'] == link[1]:
-                            info.original_filename = f['name']
-                            info.date = dateutil.parser.parse(f['date'])
-                            info.thingi_id = link[1]
-                            info.file = archivo
-                            info.save()
-                            break
+                # Guardamos el STL
+                geometrymodel = GeometryModel()
+                geometrymodel.file.save('{repository}-{id}-{fid}.{extension}'.format(repository=objeto.external_id.repository,
+                                                                               id=objeto.external_id.external_id,
+                                                                               fid=link[1],
+                                                                               extension=f['name'].split('.')[-1]), File(file))
+                geometrymodel.save()
+                archivo = modelos.ArchivoSTL(model=geometrymodel,
+                                             time_as_a_function_of_scale=modelos.Polinomio.objects.create(),
+                                             object=objeto)
 
-                    archivos.append(archivo)
-                    os.remove(link[0])
-                    task.remove_subtask_by_result(link)
-            except:
-                print(link)
-                traceback.print_exc()
-                raise ValueError
-        try:
-            ### Tenemos los archivos descargados. Necesitamos completar su tiempo de imp, peso, dimensiones
-            print("Ejecutando trabajos de sliceo")
-            slicer_jobs_ids = {}
-            slicer_jobs_ids_poly = {}
-            for archivo in archivos:
-                archivos_r = {'file': archivo.file.open(mode='rb')}
-                rf = requests.post(settings.SLICER_API_ENDPOINT, files = archivos_r)
-                archivos_r = {'file': archivo.file.open(mode='rb')}
-                parametros = {'escala_inicial':'0.2','escala_final':'1.6','escala_paso':'0.2'}
-                rfp = requests.post(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/', files = archivos_r, data = parametros)
-                archivo.file.close
-                #Parseamos la id de trabajo
-                slicer_jobs_ids[archivo] = rf.json()['id']
-                slicer_jobs_ids_poly[archivo] = rfp.json()['id']
-            ### Esperamos 600s a que haga todos los trabajos
-            print("Trabajos inicializados")
-            poly_f, slice_f = False, False
-            for _ in range(0,600):
-                if debug and _%60==0:
-                    print("---------ID-------------------------ESTADO-----------")
-                #Termino con el calculo de polinomios?
-                if not poly_f:
-                    for job_id in slicer_jobs_ids_poly.values():
-                        estado = requests.get(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/status/{}/'.format(job_id)).json()['estado']
-                        if debug and _%60==0:
-                            print("          {}                      {}".format(job_id,estado))
-                        if int(estado) >= 300:
-                            print("Hubo un error de sliceo, el identificador de trabajo es {}, con estado {}".format(job_id,estado))
-                            raise ValueError("Slicing error")
-                        if estado != '200':
-                            break
-                    else:
-                        poly_f = True
-                #Y con el calculo de pesos (aka sliceo comun)?
-                if not slice_f:
-                    for job_id in slicer_jobs_ids.values():
-                        estado = requests.get(settings.SLICER_API_ENDPOINT+'status/{}/'.format(job_id)).json()['estado']
-                        if debug and _%60==0:
-                            print("          {}                      {}".format(job_id,estado))
-                        if int(estado) >= 300:
-                            print("Hubo un error de sliceo, el identificador de trabajo es {}, con estado {}".format(job_id,estado))
-                            if estado == 304:
-                                control.revoke(self.request.id)
-                                objeto.delete()
-                            raise ValueError("Slicing error")
-                        if estado != '200':
-                            break
-                    else:
-                        slice_f = True
-                if slice_f and poly_f:
-                    break
-                time.sleep(1)
-            else:
-                #Pasaron los 300s, y no termino de slicear
-                print(slicer_jobs_ids.values(), slicer_jobs_ids_poly.values())
-                raise ValueError("Timeout al solicitar el sliceo de los modelos")
-            ### Completamos todos los datos de los archivos
-            print("Creacion de objeto")
-            for archivo in archivos:
-                #Creamos el polinomio
-                rf_p = requests.get(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/status/{}/'.format(slicer_jobs_ids_poly[archivo])).json()
-                poly_coef = json.loads(rf_p['poly'])
-                polinomio = modelos.Polinomio()
-                polinomio.a0 = poly_coef[3]
-                polinomio.a1 = poly_coef[2]
-                polinomio.a2 = poly_coef[1]
-                polinomio.a3 = poly_coef[0]
-                polinomio.save()
-                #Establecemos los coeficientes y guardamos
-                rf = requests.get(settings.SLICER_API_ENDPOINT+'status/{}/'.format(slicer_jobs_ids[archivo])).json()
-                archivo.printing_time_default = rf['tiempo_estimado']
-                archivo.size_x_default = rf['size_x']
-                archivo.size_y_default = rf['size_y']
-                archivo.size_z_default = rf['size_z']
-                archivo.weight_default = rf['peso']
-                archivo.time_as_a_function_of_scale = polinomio
-                #Antes de guardar el archivo, hacemos un examen de sanidad sobre los resultados del sliceo
-                if slicer_results_sanity_check(res_file=rf,res_poly=rf_p):
-                    archivo.save()
-                else:
-                    print("El archivo {} fue removido".format(archivo.name()))
-                    archivos.remove(archivo)
+            # Ejecutar tareas de cotizacion
+            geometrymodel.create_orientation_result()
+            geometrymodel.create_geometry_result()
+            archivo.quote = SliceJob.objects.quote_object(geometrymodel)
+            archivo.save()
 
-            for archivo in archivos:
-                archivo.object = objeto
-                archivo.save()
+            # Limpiamos archivos descargados, y enlazamos modelos
+            info.file = archivo
+            info.save()
+            os.remove(link[0])
+            task.remove_subtask_by_result(link)
 
-            #Es posible que el objeto no tenga ningun archivo, en cuyo caso, lo borramos
-            if len(archivos) == 0:
-                objeto.delete()
-                return False
+            # Solicitamos cotizacion para armar el polinomio
+            for scale in np.linspace(0.2, 2, 9):
+                quote = SliceJob.objects.quote_object(geometrymodel, scale)
+                modelos.PolinomioPunto.objects.create(quote=quote,
+                                                      scale=scale,
+                                                      poly=archivo.time_as_a_function_of_scale)
 
-            #Aplicamos el filtro de archivos
-            if objeto.origin != 'human':
-                thing_files_filter(objeto)
-                ## Borramos los archivos que no pasaron el filtro
-                for f in objeto.files.all():
-                    if f.informacionthingi.filter_passed == False:
-                        #f.delete()
-                        f.object = None
-                        f.save(update_fields=['object'])
 
-            modelo_ar = modelos.ModeloAR()
-            modelo_ar.object = objeto
-            modelo_ar.save()
+        # Lanzamos el filtro de archivos
+        apply_thing_objects_filter.s(objeto.id).apply_async()
 
-            #Preparamos el modelo AR
-            modelo_ar.create_sfb(generate=True)
+        # Preparamos el modelo AR
+        modelo_ar = modelos.ModeloAR()
+        modelo_ar.object = objeto
+        modelo_ar.save()
+        modelo_ar.create_sfb(generate=True)
 
-        except SoftTimeLimitExceeded:
-                print("Slicing tasks global tiemout (network error?)")
-                control.revoke(self.request.id)
-                objeto.delete()
-        except:
-            traceback.print_exc()
-
-        #Le quitamos el flag de importacion parcial
+        # Le quitamos el flag de importacion parcial
         objeto.partial = False
         objeto.save(update_fields=['partial'])
         return (objeto.id, True)
 
 
 
-def slicer_results_sanity_check(res_file,res_poly):
-    #El polinomio fue correctamente ajustado?
-    if len(json.loads(res_poly['escalas'])) < 5:
-        return False
-    #El archivo es muy pequeño?
-    if res_file['size_x']*res_file['size_y']*res_file['size_z'] < 2**3:
-        return False
-    return True
+
 
 def add_objects(max_things,start_page=0):
     #Funcion para popular la base de datos

@@ -155,7 +155,7 @@ def slice_model(slicejob_id):
     full_config = {**slicejob.profile.print.get_dict(), **slicejob.profile.printer.get_dict(),
                    **slicejob.profile.material.get_dict()}
     with open(ini_path, 'w') as f:
-        writer = csv.writer(f, delimiter='=', )
+        writer = csv.writer(f, delimiter='=')
         for key, value in full_config.items():
             writer.writerow([key, value])
 
@@ -164,8 +164,8 @@ def slice_model(slicejob_id):
     if not os.path.exists(slic3r_bin_dir):
         raise modelos.LibrariesNotConfigured
     print([slic3r_bin_dir, '--load', ini_path, '-m', '-o', output_path, *models_path])
-    proc = subprocess.run([slic3r_bin_dir, '--load', ini_path, '-o', output_path, *models_path],
-                          universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.run([slic3r_bin_dir, '--load', ini_path, '-o', output_path, '--scale', str(slicejob.scale), *models_path]
+                          , universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     for line in proc.stdout.splitlines():
         if 'Done' in line:
             # We search for print time in the output

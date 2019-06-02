@@ -16,7 +16,7 @@ import shutil
 import trimesh
 import googlemaps
 import unicodedata
-from numpy import mean
+from numpy import mean, polyfit
 from random import uniform
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save, pre_save, m2m_changed
@@ -29,7 +29,7 @@ from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToFit
 from db.tools import price_calculator
 import mercadopago
-
+from slaicer.models import SliceJob, GeometryModel
 
 '''
 Modelos internos (almacenados en la DB)
@@ -104,7 +104,7 @@ class Polinomio(models.Model):
     a3 = models.FloatField(default=0)
     a4 = models.FloatField(default=0)
     a5 = models.FloatField(default=0)
-    plot = models.ImageField(upload_to='images/plots',null=True,blank=True)
+    plot = models.ImageField(upload_to='images/plots', null=True, blank=True)
 
     def __str__(self):
         return "{} x^5+ {} x^4+ {} x^3+ {} x^2+ {} x+ {}".format(self.a5,self.a4,self.a3,self.a2,self.a1,self.a0)
@@ -114,12 +114,35 @@ class Polinomio(models.Model):
         return self.a0 != None
 
     def coefficients_list(self):
-        return [self.a5,self.a4,self.a3,self.a2,self.a1,self.a0]
+        return [self.a5, self.a4, self.a3, self.a2, self.a1, self.a0]
 
-@receiver(post_save, sender=Polinomio)
-def plot_poly(sender, instance, update_fields, **kwargs):
-    if update_fields == None:
-        polyplot(instance)
+    def build_poly(self):
+        # Estan todos los puntos listos?
+        if any([not point.quote.ready() for point in self.data.all()]):
+            return None
+        results = {point.scale: point.quote.build_time for point in self.data.all() if point.quote.build_time is not None}
+        print(results)
+        p = polyfit(list(results.keys()), list(results.values()), 3)
+        self.a0 = p.tolist()[3]
+        self.a1 = p.tolist()[2]
+        self.a2 = p.tolist()[1]
+        self.a3 = p.tolist()[0]
+        self.save()
+        # Actualizamos el grafico
+        polyplot(self)
+
+
+# Usado para interpolar el polinomio
+class PolinomioPunto(models.Model):
+    quote = models.OneToOneField(SliceJob, on_delete=models.CASCADE)
+    scale = models.FloatField()
+    poly = models.ForeignKey(Polinomio, related_name='data', on_delete=models.CASCADE)
+
+@receiver(post_save, sender=SliceJob)
+def check_for_poly_completion(sender, instance, update_fields, **kwargs):
+    if hasattr(instance, 'polinomiopunto'):
+        instance.polinomiopunto.poly.build_poly()
+
 
 class Color(models.Model):
     name = models.CharField(max_length=100)
@@ -274,29 +297,44 @@ Modelos accesorios
 
 class ArchivoSTL(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    file = models.FileField(upload_to='stl/')
+    model = models.OneToOneField(GeometryModel, on_delete=models.CASCADE)
+    quote = models.OneToOneField(SliceJob, on_delete=models.CASCADE, null=True)
     object = models.ForeignKey(Objeto,blank=True,null=True,on_delete=models.CASCADE,related_name='files')
-    #Tiempo de impresion en escala 1, en segundos
-    printing_time_default = models.IntegerField(default=None, null=True)
-    time_as_a_function_of_scale = models.ForeignKey(Polinomio,on_delete=models.SET_NULL,null=True)
-    #Dimensiones del objeto en escala 1, en mm
-    size_x_default = models.FloatField(default=10)
-    size_y_default = models.FloatField(default=10)
-    size_z_default = models.FloatField(default=10)
-    #Peso del objeto en escala 1, en g
-    weight_default = models.FloatField(default=10)
-    #Identificador de trabajo en SlicerAPI
-    slicer_job_id = models.IntegerField(null=True)
+    time_as_a_function_of_scale = models.OneToOneField(Polinomio, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
-        return self.file.name
+        return self.model.file.name
+
+    def quote_ready(self):
+        return self.quote.ready() if self.quote is not None else False
 
     @property
-    def ready(self):
-        return self.printing_time_default != None
+    def file(self):
+        return self.model.get_model_path()
 
-    def name(self):
-        return self.file.name
+    #Tiempo de impresion en escala 1, en segundos
+    @property
+    def printing_time_default(self):
+        return self.quote.build_time
+
+    #Dimensiones del objeto en escala 1, en mm
+    @property
+    def size_x_default(self):
+        return self.model.orientation.size_x
+
+    @property
+    def size_y_default(self):
+        return self.model.orientation.size_x
+
+    @property
+    def size_z_default(self):
+        return self.model.orientation.size_x
+
+    #Peso del objeto en escala 1, en g
+    @property
+    def weight_default(self):
+        return self.quote.weight
+
 
 class Imagen(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -346,9 +384,9 @@ class ModeloAR(models.Model):
     #Si el modelo tiene un unico objeto, el STL combinado, es el mismo
     def check_for_single_object_file(self):
         if len(self.object.files.all()) == 1:
-            self.combined_stl = self.object.files.all()[0].file
+            self.combined_stl = self.object.files.all()[0].model.file
             self.human_flag = True
-            self.save(update_fields=['combined_stl','human_flag'])
+            self.save(update_fields=['combined_stl', 'human_flag'])
             self.calculate_combined_dimensions()
             return True
         else:
@@ -356,23 +394,21 @@ class ModeloAR(models.Model):
 
     def arrange_and_combine_files(self):
         res = stl_to_sfb.combine_stls_files(self.object)
-        with open(res+'/plate00.stl','rb') as f:
-            self.combined_stl.save(self.object.name+'.stl',File(f),save=False)
+        with open(res+'/plate00.stl', 'rb') as f:
+            self.combined_stl.save(self.object.name+'.stl', File(f), save=False)
             self.save(update_fields=['combined_stl'])
         shutil.rmtree(res)
 
     def combine_stl(self):
         new_file = stl_to_sfb.combine_stl_with_correct_coordinates(self)
-        #Borramos el archivo anterior
-        #self.combined_stl.delete()
-        self.combined_stl.save(name,new_file,save=False)
+        self.combined_stl.save(self.combined_stl.name, new_file, save=False)
         #Ejecutamos la funcion de guardar a parte, para que evitar un loop infinito con los signals
         self.save(update_fields=['combined_stl','human_flag'])
         #Actualizamos el tamaño del objeto
         self.calculate_combined_dimensions()
 
-    def create_sfb(self,generate=False):
-        if not self.combined_stl.name:
+    def create_sfb(self, generate=False, force_generation=False):
+        if not self.combined_stl.name or force_generation:
             #No tenemos STL combinado. Intentamos generarlo?
             if generate:
                 if not self.check_for_single_object_file():
@@ -380,18 +416,18 @@ class ModeloAR(models.Model):
             else:
                 return False
         #Creamos ambos SFB
-        for field, fieldname, rotate in [(self.sfb_file,'sfb_file',False),(self.sfb_file_rotated,'sfb_file_rotated',True)]:
-            sfb_path = stl_to_sfb.convert(settings.BASE_DIR+self.combined_stl.url,self.combined_stl.name,rotate)
+        for field, fieldname, rotate in [(self.sfb_file, 'sfb_file', False), (self.sfb_file_rotated, 'sfb_file_rotated', True)]:
+            sfb_path = stl_to_sfb.convert(self.combined_stl.path, self.combined_stl.name, rotate)
             with open(sfb_path,'rb') as f:
-                field.save(sfb_path.split('/')[-1],File(f),save=False)
+                field.save(sfb_path.split('/')[-1], File(f), save=False)
                 self.save(update_fields=[fieldname])
                 os.remove(sfb_path)
 
     def calculate_combined_dimensions(self):
         #Calcula la bounding_box sin orientar. Se puede cambiar por  .bounding_box_oriented.primitive.transform
         if self.human_flag:
-            self.combined_size_x, self.combined_size_y, self.combined_size_z = list(trimesh.load(settings.BASE_DIR+self.combined_stl.url).bounding_box.extents)
-            self.save(update_fields=['combined_size_x','combined_size_y','combined_size_z'])
+            self.combined_size_x, self.combined_size_y, self.combined_size_z = list(trimesh.load(self.combined_stl.path).bounding_box.extents)
+            self.save(update_fields=['combined_size_x', 'combined_size_y', 'combined_size_z'])
 
 #Utilizados para actualizar las dimensiones del objeto al cambiar el stl_combinado
 @receiver(post_save, sender=ModeloAR)
@@ -410,7 +446,7 @@ class ModeloARRender(models.Model):
             return False
         png_path = render_image(self.model_ar)
         with open(png_path,'rb') as f:
-            self.image_render.save(self.model_ar.combined_stl.name.split('.')[0],File(f))
+            self.image_render.save(self.model_ar.combined_stl.name.split('.')[0], File(f))
         os.remove(png_path)
 
 #Utilizados para actualizar el render al cambiar el ModeloAR

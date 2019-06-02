@@ -105,6 +105,30 @@ def colors_setup(Color, settings):
         os.remove(sfb_path)
     print("Colors added")
 
+
+def prusa_profiles_setup():
+    global slaicer_models, requests, ContentFile
+    # Content file creation
+    cf = slaicer_models.ConfigurationFile.objects.create(name='Prusa-settings', version='0.4.5', vendor='Prusa', provider='https://raw.githubusercontent.com/prusa3d/Slic3r-settings/master/live/PrusaResearch/0.4.5.ini')
+    r = requests.get('https://raw.githubusercontent.com/prusa3d/Slic3r-settings/master/live/PrusaResearch/0.4.5.ini')
+    cf.file.save('prusa.ini', ContentFile(r.content))
+    cf.import_available_profiles()
+    printer_profiles = ['Original Prusa i3 MK3']
+    material_profiles = ['Prusa PLA']
+    print_profiles = ['0.15mm QUALITY MK3', '0.20mm QUALITY MK3', '0.10mm DETAIL MK3', '0.05mm ULTRADETAIL MK3']
+    # Available profiles import
+    for o in slaicer_models.AvailableProfile.objects.all():
+        if o.config_name in printer_profiles or o.config_name in material_profiles or o.config_name in print_profiles:
+            o.convert()
+    # We link the profiles
+    printer_imported_profile = slaicer_models.PrinterProfile.objects.filter(config_name='Original Prusa i3 MK3').first()
+    for o in slaicer_models.PrintProfile.objects.all():
+        if o.config_name in print_profiles:
+            o.compatible_printers_condition.add(printer_imported_profile)
+    # Quoting profile creation
+    slaicer_models.SliceConfiguration.objects.create(printer=slaicer_models.PrinterProfile.objects.last(), material=slaicer_models.MaterialProfile.objects.last(), quoting_profile=True)
+    print("Quoting profiles added")
+
 def testing_objects_setup():
     #Object population (for testing)
     valid_input = False
@@ -114,9 +138,10 @@ def testing_objects_setup():
         if ans == "Y":
             valid_input = True
             print("Importando objetos....")
-            ObjetoThingi.objects.create_object(external_id=1278865, origin='human')
+            ObjetoThingi.objects.create_object(external_id=1278865)
             ObjetoThingi.objects.create_object(external_id=1179160)
             ObjetoThingi.objects.create_object(external_id=2803935)
+            ObjetoThingi.objects.create_object(external_id=3450069)
 
         elif ans == "N":
             valid_input = True
@@ -140,7 +165,10 @@ if __name__ == '__main__':
     from thingiverse.tasks import request_from_thingi
     from db.models import *
     from django.core.files import File
+    from django.core.files.base import ContentFile
     from thingiverse.import_from_thingi import *
+    from slaicer import models as slaicer_models
+    import requests
     import os
     import subprocess
     print('Populating Database...')
@@ -151,4 +179,5 @@ if __name__ == '__main__':
     thingiverse_apikeys_setup(ApiKey)
     populate_categories(request_from_thingi,settings,CategoriaThigi)
     colors_setup(Color, settings)
+    prusa_profiles_setup()
     testing_objects_setup()

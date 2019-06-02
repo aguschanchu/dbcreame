@@ -19,6 +19,7 @@ from django.forms.models import model_to_dict
 from django.apps import apps
 from django_celery_results.models import TaskResult
 from celery import states
+from django.utils import timezone
 
 '''
 Los siguientes modelos, corresponden a un los 3 settings requeridos por Slic3r para hacer un trabajo. A saber, parametros
@@ -298,7 +299,7 @@ Trabajo de sliceo. Acepta multiples STLs
 '''
 
 class SliceJobManager(models.Manager):
-    def quote_object(self, model):
+    def quote_object(self, model, scale=1):
         # It's a quoting slicejob? We specify the quoting profile
         if not SliceConfiguration.objects.filter(quoting_profile=True).exists():
             raise ValidationError("Quoting profile incorrectly configured. Please set one")
@@ -308,8 +309,9 @@ class SliceJobManager(models.Manager):
                                                     print=quoting_profile.print,
                                                     auto_print_profile=quoting_profile.auto_print_profile,
                                                     auto_support=quoting_profile.auto_support)
-        o = self.create(quote=True)
+        o = self.create(quote=True, scale=scale)
         o.geometry_models.add(model)
+        o.scale = scale
         profile.job = o
         profile.save()
         o.launch_task()
@@ -320,7 +322,8 @@ class SliceJob(models.Model):
     # Parametros de trabajo
     geometry_models = models.ManyToManyField(GeometryModel)
     save_gcode = models.BooleanField(default=False)
-    created = models.DateTimeField(default=datetime.datetime.now)
+    scale = models.FloatField(default=1)
+    created = models.DateTimeField(default=timezone.now)
     celery_id = models.CharField(max_length=50, null=True, blank=True)
     # TODO: Discretizar errores posibles (SliceJob)
     error_log = models.TextField(null=True, blank=True)
@@ -349,13 +352,6 @@ class SliceJob(models.Model):
         self.celery_id = tasks.slice_model.s(self.id).apply_async(countdown=1)
         self.save(update_fields=['celery_id'])
 
-    # Sometimes we need the build_time, while we are slicing the model
-    def get_estimated_build_time(self):
-        tt = 0
-        Piece = apps.get_model('skynet.Piece')
-        for m in self.geometry_models.all():
-            tt += Piece.objects.filter(stl=m).first().quote.build_time
-        return tt
 
 
 '''
