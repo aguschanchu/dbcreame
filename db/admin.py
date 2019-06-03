@@ -1,7 +1,9 @@
 from django.contrib import admin
 from .models import Autor, Categoria, Tag, ReferenciaExterna, Polinomio, Objeto, Usuario, ObjetoPersonalizado, Compra, Imagen, ArchivoSTL, ModeloAR, Color, SfbRotationTracker, DireccionDeEnvio
 from django.utils.html import format_html_join, format_html
+from .render.plot_poly import polyplot
 import trimesh
+import os
 
 @admin.register(Autor)
 class AutorAdmin(admin.ModelAdmin):
@@ -26,9 +28,17 @@ class TagAdmin(admin.ModelAdmin):
 class PolinomioAdmin(admin.ModelAdmin):
     list_display = ('a0','a1','a2','a3','a4','a5')
     readonly_fields = ('image',)
+    actions = ['rebuild_images']
 
     def image(self,obj):
         return format_html('<img src='+obj.plot.url+' width="40%" height="40%"></img>')
+
+    def rebuild_images(self, request, queryset):
+        for o in queryset:
+            if o.plot is not None and not os.path.exists(o.plot.path):
+                polyplot(o)
+
+    rebuild_images.short_description = "Rebuild images"
 
 @admin.register(ReferenciaExterna)
 class ReferenciaExternaAdmin(admin.ModelAdmin):
@@ -76,14 +86,14 @@ class ObjetoAdmin(admin.ModelAdmin):
     list_display = ('name','author','external_id','total_printing_time_default','human_flag')
     raw_id_fields = ('author',)
     filter_horizontal = ('category','tags')
-    readonly_fields = ['view_main_image','total_printing_time_default','popular_color']
+    readonly_fields = ['view_main_image','total_printing_time_default','popular_color','filter_passed']
     inlines = [ArchivoSTLInline,ImagenInline,ModelARInline]
     fieldsets = (
             (None, {
                 'fields': (('name','name_es'),)
                 }),
             (None, {
-                'fields': ('view_main_image',('author','like_count','total_printing_time_default','discount','hidden'),('default_color','popular_color'))
+                'fields': ('view_main_image',('author','like_count','total_printing_time_default','discount','hidden','filter_passed'),('default_color','popular_color'))
                 }),
             ('Descripcion', {
                 'fields': ('description',),
@@ -99,16 +109,23 @@ class ObjetoAdmin(admin.ModelAdmin):
                 })
         )
 
-    def total_printing_time_default(self,obj):
+    def total_printing_time_default(self, obj):
         try:
             return round(sum([o.printing_time_default for o in ArchivoSTL.objects.filter(object=obj)])/60**2, 2)
         except:
             return 0
 
-    def human_flag(self,obj):
+    def human_flag(self, obj):
         return obj.modeloar.human_flag
 
+    def filter_passed(self, obj):
+        if hasattr(obj.external_id, 'thingiverse_attributes'):
+            return obj.external_id.thingiverse_attributes.filter_passed
+        else:
+            return None
+
     human_flag.boolean = True
+    filter_passed.boolean = True
 
 
 @admin.register(Usuario)
