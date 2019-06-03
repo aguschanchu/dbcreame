@@ -131,7 +131,7 @@ DATABASES = {
         'NAME': 'dbapi',
         'USER': 'dbapi',
         'PASSWORD': '***REMOVED***',
-        'HOST': '127.0.0.1',
+        'HOST': CURRENT_HOST,
         'PORT': '',
         'OPTIONS': {
            'sslmode': 'disable',

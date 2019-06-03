@@ -208,7 +208,7 @@ class GeometryModel(models.Model):
             # We need to download the file
             http = get_connection_pool()
             url = "{protocol}://{domain}{url}".format(**{'protocol': settings.CURRENT_PROTOCOL,
-                                                         'domain': Site.objects.get_current().domain,
+                                                         'domain': settings.CURRENT_HOST,
                                                          'url': self.file.url})
             path = "{base_dir}/tmp/{id}-{rand_string}.{extension}".format(**{'base_dir': settings.BASE_DIR,
                                                                              'id': self.id,
