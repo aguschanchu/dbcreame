@@ -74,8 +74,8 @@ class PrinterProfile(models.Model):
 
     def get_dict(self):
         return {**self.config, **model_to_dict(self, fields=['nozzle_diameter', 'printer_model']),
-                'max_print_height': self.bed_shape[2],
-                'bed_shape': "0x0,{x}x0,{x}x{y},0x{y}".format(x=self.bed_shape[0], y=self.bed_shape[1])}
+                'max_print_height': round(self.bed_shape[2]),
+                'bed_shape': "0x0,{x}x0,{x}x{y},0x{y}".format(x=round(self.bed_shape[0]), y=round(self.bed_shape[1]))}
 
     def min_quality(self):
         return min([x.layer_height * self.base_quality for x in self.available_print_profiles.all()])

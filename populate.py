@@ -125,6 +125,9 @@ def prusa_profiles_setup():
     for o in slaicer_models.PrintProfile.objects.all():
         if o.config_name in print_profiles:
             o.compatible_printers_condition.add(printer_imported_profile)
+    # Cambiamos el tamaño de cama
+    printer_imported_profile.bed_shape = [600, 600, 600]
+    printer_imported_profile.save()
     # Quoting profile creation
     slaicer_models.SliceConfiguration.objects.create(printer=slaicer_models.PrinterProfile.objects.last(), material=slaicer_models.MaterialProfile.objects.last(), quoting_profile=True)
     print("Quoting profiles added")
