@@ -222,24 +222,24 @@ class GeometryModel(models.Model):
             file.write(http.request('GET', url).data)
         return path
 
-    def create_orientation_result(self):
+    def create_orientation_result(self, priority=9):
         # Does the instance exists already?
         if hasattr(self, 'orientation') or not self.orientation_req:
             return None
         # Ok, no, lets create the task
-        task = tasks.fill_tweaker_result.s(self.id).apply_async()
+        task = tasks.fill_tweaker_result.s(self.id).apply_async(priority=priority)
         TweakerResult.objects.create(geometry_model=self, celery_id=task.id)
 
     @property
     def orientation_result_ready(self):
         return False if not hasattr(self, 'orientation') else self.orientation.ready()
 
-    def create_geometry_result(self):
+    def create_geometry_result(self, priority=9):
         # Does the instance exists already?
         if hasattr(self, 'geometry') or not self.geometry_req:
             return None
         # Ok, no, lets create the task
-        task = tasks.fill_geometry_result.s(self.id).apply_async()
+        task = tasks.fill_geometry_result.s(self.id).apply_async(priority=priority)
         GeometryResult.objects.create(geometry_model=self, celery_id=task.id)
 
     @property
@@ -299,7 +299,7 @@ Trabajo de sliceo. Acepta multiples STLs
 '''
 
 class SliceJobManager(models.Manager):
-    def quote_object(self, model, scale=1):
+    def quote_object(self, model, scale=1, priority=9):
         # It's a quoting slicejob? We specify the quoting profile
         if not SliceConfiguration.objects.filter(quoting_profile=True).exists():
             raise ValidationError("Quoting profile incorrectly configured. Please set one")
@@ -314,7 +314,7 @@ class SliceJobManager(models.Manager):
         o.scale = scale
         profile.job = o
         profile.save()
-        o.launch_task()
+        o.launch_task(priority)
         return o
 
 
@@ -346,10 +346,10 @@ class SliceJob(models.Model):
             return True
         return False if not TaskResult.objects.filter(task_id=self.celery_id).exists() else TaskResult.objects.filter(task_id=self.celery_id).first().status in states.READY_STATES
 
-    def launch_task(self):
+    def launch_task(self, priority=9):
         if not hasattr(self, 'profile'):
             raise ValidationError("Profile not specified")
-        self.celery_id = tasks.slice_model.s(self.id).apply_async(countdown=1)
+        self.celery_id = tasks.slice_model.s(self.id).apply_async(countdown=1, priority=priority)
         self.save(update_fields=['celery_id'])
 
 

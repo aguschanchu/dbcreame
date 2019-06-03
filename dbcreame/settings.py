@@ -225,12 +225,11 @@ MERCADOPAGO_SANDBOX_MODE = True
 
 #Celery config
 CELERY_RESULT_BACKEND = 'django-db'
-CELERY_BROKER_URL = 'amqp://'
+CELERY_BROKER_URL = 'amqp://agus:***REMOVED***@{site}:5672/dbcreame'.format(site=CURRENT_HOST)
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_SOFT_TIME_LIMIT = 600*3
 CELERY_CHORD_UNLOCK_MAX_RETRIES = 60
 CELERY_PREFETCH_MULTIPLIER = 1
-CELERY_QUEUES = ('http', 'celery', 'low_priority', 'vision')
 
 #Configuraciones adicionales
 SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'
@@ -246,7 +245,7 @@ GOOGLE_MAPS_API_KEY = "***REMOVED***"
 VISION_RESULTS_AMOUNT = 10
 
 #Configuraciones de precios
-PRECIO_POR_HORA_DE_IMPRESION = 40
+PRECIO_POR_HORA_DE_IMPRESION = 50
 SHIPNOW_API_URL = 'https://api.shipnow.com.ar/shipping_services/default?weight=1000&to_zip_code={zip}'
 
 

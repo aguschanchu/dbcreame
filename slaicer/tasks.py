@@ -21,7 +21,7 @@ class ModelNotReady(Exception):
     """Model not ready exception, used for celery autoretry"""
     pass
 
-@shared_task(queue='celery', autoretry_for=(ModelNotReady,), max_retries=5, default_retry_delay=2)
+@shared_task(queue='slaicer-geom', autoretry_for=(ModelNotReady,), max_retries=5, default_retry_delay=2)
 def fill_tweaker_result(geometrymodel_id):
     try:
         geometrymodel = modelos.GeometryModel.objects.get(id=geometrymodel_id)
@@ -41,7 +41,7 @@ def fill_tweaker_result(geometrymodel_id):
     tr.save()
 
 
-@shared_task(queue='celery', autoretry_for=(ModelNotReady,), max_retries=5, default_retry_delay=2)
+@shared_task(queue='slaicer-geom', autoretry_for=(ModelNotReady,), max_retries=5, default_retry_delay=2)
 def fill_geometry_result(geometrymodel_id):
     try:
         geometrymodel = modelos.GeometryModel.objects.get(id=geometrymodel_id)
@@ -92,7 +92,7 @@ def parse_build_time(line):
 
 
 
-@shared_task(queue='celery', autoretry_for=(ModelNotReady,), max_retries=60, default_retry_delay=2)
+@shared_task(queue='slaicer', autoretry_for=(ModelNotReady,), max_retries=60, default_retry_delay=2)
 def slice_model(slicejob_id):
     try:
         slicejob = modelos.SliceJob.objects.get(id=slicejob_id)

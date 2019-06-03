@@ -152,7 +152,7 @@ def add_object_from_thingiverse_chain(thingiid, file_list = None, debug = True, 
     ])
     #Creacion de objeto a partir de informacion descargada
     res |= add_object.s(thingiid, partial, debug, origin)
-    res |= download_images_task_group.s(partial)
+    res |= download_images_task_group.s(partial, ObjetoThingi.priority_def(origin))
     if not partial:
         res |= add_files_to_thingiverse_object.s(file_list)
     return res
@@ -236,14 +236,14 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
     return (objeto.id, [j['sizes'][12]['url'] for j in r['img']])
 
 @shared_task()
-def download_images_task_group(it,partial):
+def download_images_task_group(it, partial, priority):
     # Map a callback over an iterator and return as a group
     res = [translate_name.s(it[0])]
     #Una vez que se descargue la main image, podemos aplicar el filtro
     res.append(download_image.s(it[0],it[1].pop(0),True) | apply_thing_filter.s())
     for i in it[1]:
         res.append(download_image.s(it[0],i,False))
-    g = group(res).apply_async()
+    g = group(res).apply_async(priority = priority)
     if partial:
         return (it[0],g.id)
     else:
@@ -420,9 +420,9 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
                                              object=objeto)
 
             # Ejecutar tareas de cotizacion
-            geometrymodel.create_orientation_result()
-            geometrymodel.create_geometry_result()
-            archivo.quote = SliceJob.objects.quote_object(geometrymodel)
+            geometrymodel.create_orientation_result(priority=task.priority_get)
+            geometrymodel.create_geometry_result(priority=task.priority_get)
+            archivo.quote = SliceJob.objects.quote_object(geometrymodel, priority=task.priority_get)
             archivo.save()
 
             # Limpiamos archivos descargados, y enlazamos modelos
@@ -433,14 +433,14 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
 
             # Solicitamos cotizacion para armar el polinomio
             for scale in np.linspace(0.2, 2, 9):
-                quote = SliceJob.objects.quote_object(geometrymodel, scale)
+                quote = SliceJob.objects.quote_object(geometrymodel, scale=scale, priority=task.priority_get)
                 modelos.PolinomioPunto.objects.create(quote=quote,
                                                       scale=scale,
                                                       poly=archivo.time_as_a_function_of_scale)
 
 
         # Lanzamos el filtro de archivos
-        apply_thing_objects_filter.s(objeto.id).apply_async()
+        apply_thing_objects_filter.s(objeto.id).apply_async(priority = task.priority_get)
 
         # Preparamos el modelo AR
         modelo_ar = modelos.ModeloAR()
