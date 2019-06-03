@@ -207,9 +207,11 @@ class GeometryModel(models.Model):
         else:
             # We need to download the file
             http = get_connection_pool()
-            url = "{protocol}://{domain}{url}".format(**{'protocol': settings.CURRENT_PROTOCOL,
-                                                         'domain': settings.CURRENT_HOST,
-                                                         'url': self.file.url})
+            url = "{protocol}://{domain}:{port}{url}".format(protocol=settings.CURRENT_PROTOCOL,
+                                                            domain=settings.CURRENT_HOST,
+                                                            port=settings.CURRENT_PORT,
+                                                            url=self.file.url)
+            print(url)
             path = "{base_dir}/tmp/{id}-{rand_string}.{extension}".format(**{'base_dir': settings.BASE_DIR,
                                                                              'id': self.id,
                                                                              'rand_string': ''.join(
