@@ -13,7 +13,7 @@ import json
 import urllib3
 from urllib3.util import Retry
 from urllib3 import PoolManager, ProxyManager, Timeout
-from urllib3.exceptions import MaxRetryError, TimeoutError
+from urllib3.exceptions import MaxRetryError, TimeoutError, ProxyError
 import pickle
 urllib3.disable_warnings()
 from celery.task import control
@@ -28,17 +28,15 @@ from celery.utils.log import get_task_logger
 import requests
 logger = get_task_logger(__name__)
 
-
 def get_connection_pool():
-    retry_policy = Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501)))
+    retry_policy = Retry(total=5, backoff_factor=0.1, status_forcelist=[x for x in range(405, 501) if x not in [407]])
     timeout_policy = Timeout(read=10, connect=5)
-
     if settings.USE_SCAPOXY:
         http = ProxyManager('http://localhost:8888', retries= retry_policy, timeout = timeout_policy)
     else:
         http = PoolManager(retries= retry_policy, timeout = timeout_policy)
-
     return http
+
 
 def adjust_proxy_scaling():
     headers = {'Authorization': base64.b64encode(str.encode(settings.SCRAPOXY_PASSWORD)), 'Content-type': 'application/json'}
@@ -48,35 +46,49 @@ def adjust_proxy_scaling():
     except:
         raise ValueError("Error on connecting to proxy manager")
     if r['required'] == 0:
-        payload = {"downscaleDelay": 600000, "min": 0, "max": 7, "required": 1}
-        r = requests.patch(url='http://localhost:8889/api/scaling', data=json.dumps(payload), headers=headers)
+        payload = {"downscaleDelay": 30*60*1000, "min": 0, "max": 7, "required": 1}
+        requests.patch(url='http://localhost:8889/api/scaling', data=json.dumps(payload), headers=headers)
 
-@shared_task(bind=True, queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
-def request_from_thingi(self, url, content=False,params=''):
+
+class ProxyErrorCode(Exception):
+    """ Used for error tracking """
+
+
+@shared_task(queue='http',autoretry_for=(TypeError, ValueError), retry_backoff=True, max_retries=50)
+def request_from_thingi(url, content=False, params=''):
     global logger
     endpoint = settings.THINGIVERSE_API_ENDPOINT
     http = get_connection_pool()
-    for _ in range(0,60):
+    for _ in range(0, 60):
         k = ApiKey.get_api_key()
-        try:
-            if k != None:
-                if not content:
-                    r = http.request('GET',endpoint+quote(url)+'?access_token='+k+params)
-                    r = json.loads(r.data.decode('utf-8'))
-                else:
-                    r = http.request('GET',endpoint+url+'?access_token='+k+params)
-                    r = r.data
-                return r
+        if k is not None:
+            for tries in range(1, 3):
+                try:
+                    if not content:
+                        r = http.request('GET', endpoint+quote(url)+'?access_token='+k+params)
+                        if r.status == 407:
+                            raise ProxyError
+                        r = json.loads(r.data.decode('utf-8'))
+                    else:
+                        r = http.request('GET', endpoint+url+'?access_token='+k+params)
+                        if r.status == 407:
+                            raise ProxyError
+                        r = r.data
+                    return r
 
-        except (MaxRetryError, TimeoutError):
-            # Se trata de un error del proxy?
-            if 'ERROR: NO RUNNING INSTANCE FOUND' in traceback.format_exc().upper():
-                adjust_proxy_scaling()
-                raise self.retry(countdown=5)
-            # Por algun motivo celery no maneja bien estos errores. Por eso, los handleo, y re-raise otro tipo de error
-            traceback.print_exc()
-            logger.warning("Error al realizar request")
-            raise ValueError
+                except (MaxRetryError, TimeoutError) as e:
+                    if hasattr(e, 'reason'):
+                        if type(e.reason) == ProxyError:
+                            adjust_proxy_scaling()
+                            time.sleep(10)
+                    else:
+                        # Por algun motivo celery no maneja bien estos errores. Por eso, los handleo, y re-raise otro tipo de error
+                        logger.warning("Error al realizar request")
+                        raise ValueError
+
+                except (ProxyErrorCode, ProxyError):
+                    adjust_proxy_scaling()
+                    time.sleep(10)
 
         time.sleep(1)
         print('No encontre API keys')
@@ -84,6 +96,7 @@ def request_from_thingi(self, url, content=False,params=''):
         traceback.print_exc()
         logger.error("Error al hacer la request ¿hay API keys disponibles?")
         raise ValueError("Error al hacer la request ¿hay API keys disponibles?")
+
 
 @shared_task(queue='http',autoretry_for=(TypeError,ValueError,KeyError,MaxRetryError), retry_backoff=True, max_retries=50)
 def get_thing_categories_list(thingiid):
