@@ -23,12 +23,14 @@ from .filters.things_filter import *
 from .filters.things_files_filter import thing_files_filter
 from slaicer.models import GeometryModel, SliceJob
 import numpy as np
+import base64
 from celery.utils.log import get_task_logger
+import requests
 logger = get_task_logger(__name__)
 
 
 def get_connection_pool():
-    retry_policy = Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501)))
+    retry_policy = Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501)).remove(407))
     timeout_policy = Timeout(read=10, connect=5)
 
     if settings.USE_SCAPOXY:
@@ -38,8 +40,13 @@ def get_connection_pool():
 
     return http
 
-@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
-def request_from_thingi(url,content=False,params=''):
+def adjust_proxy_scaling():
+    headers = {'Authorization': base64.b64encode(str.encode(settings.SCRAPOXY_PASSWORD)), 'Content-type': 'application/json'}
+    payload = {"downscaleDelay": 600000, "min": 0, "max": 7, "required": 1}
+    r = requests.patch(url='http://localhost:8889/api/scaling', data=json.dumps(payload), headers=headers)
+
+@shared_task(bind=True, queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
+def request_from_thingi(self, url,content=False,params=''):
     global logger
     endpoint = settings.THINGIVERSE_API_ENDPOINT
     http = get_connection_pool()
@@ -48,10 +55,20 @@ def request_from_thingi(url,content=False,params=''):
         try:
             if k != None:
                 if not content:
-                    r = json.loads(http.request('GET',endpoint+quote(url)+'?access_token='+k+params).data.decode('utf-8'))
+                    r = http.request('GET',endpoint+quote(url)+'?access_token='+k+params)
+                    if r.status == 407 and settings.USE_SCAPOXY:
+                        adjust_proxy_scaling()
+                        raise self.retry(countdown=5)
+                    r = json.loads(r.data.decode('utf-8'))
+
                 else:
-                    r = http.request('GET',endpoint+url+'?access_token='+k+params).data
+                    r = http.request('GET',endpoint+url+'?access_token='+k+params)
+                    if r.status == 407 and settings.USE_SCAPOXY:
+                        adjust_proxy_scaling()
+                        raise self.retry(countdown=5)
+                    r = r.data
                 return r
+
         except (MaxRetryError, TimeoutError):
             # Por algun motivo celery no maneja bien estos errores. Por eso, los handleo, y re-raise otro tipo de error
             traceback.print_exc()

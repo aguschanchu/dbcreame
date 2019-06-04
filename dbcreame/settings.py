@@ -236,6 +236,8 @@ SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'
 THINGIVERSE_API_ENDPOINT = 'https://api.thingiverse.com/'
 DB_ADMIN_USERNAME = 'agus'
 DB_ADMIN_PASSWORD = 'Ferraro'
+SCRAPOXY_PASSWORD = '***REMOVED***'
+
 
 #Configuracion de APIs de Google (Translate y Vision)
 GOOGLE_APPLICATION_CREDENTIALS = "google_credentials.json"

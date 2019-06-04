@@ -176,6 +176,11 @@ if __name__ == '__main__':
     import subprocess
     print('Populating Database...')
     print('----------------------\n')
+
+    # First, we check for local settings correct configuration
+    if not os.path.exists('dbcreame/localenv.py'):
+        raise ValueError("Local settings not configured. Please copy localenv-sample.py to localenv.py")
+
     superuser_setup(User)
     mercadopago_setup(MPAccount)
     social_accounts_config(Site,SocialApp)
