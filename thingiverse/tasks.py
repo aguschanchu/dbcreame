@@ -46,7 +46,7 @@ def adjust_proxy_scaling():
     except:
         raise ValueError("Error on connecting to proxy manager")
     if r['required'] == 0:
-        payload = {"downscaleDelay": 30*60*1000, "min": 0, "max": 7, "required": 1}
+        payload = {"downscaleDelay": 30*60*1000, "min": 0, "max": settings.SCRAPOXY_MAX_SCALE, "required": 1}
         requests.patch(url='http://localhost:8889/api/scaling', data=json.dumps(payload), headers=headers)
 
 
@@ -89,9 +89,9 @@ def request_from_thingi(url, content=False, params=''):
                 except (ProxyErrorCode, ProxyError):
                     adjust_proxy_scaling()
                     time.sleep(10)
-
-        time.sleep(1)
-        print('No encontre API keys')
+        else:
+            time.sleep(1)
+            print('No encontre API keys')
     else:
         traceback.print_exc()
         logger.error("Error al hacer la request ¿hay API keys disponibles?")

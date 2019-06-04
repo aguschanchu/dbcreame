@@ -237,7 +237,7 @@ THINGIVERSE_API_ENDPOINT = 'https://api.thingiverse.com/'
 DB_ADMIN_USERNAME = 'agus'
 DB_ADMIN_PASSWORD = 'Ferraro'
 SCRAPOXY_PASSWORD = '***REMOVED***'
-
+SCRAPOXY_MAX_SCALE = 7
 
 #Configuracion de APIs de Google (Translate y Vision)
 GOOGLE_APPLICATION_CREDENTIALS = "google_credentials.json"
