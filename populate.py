@@ -1,15 +1,17 @@
 import os
 
+
 def superuser_setup(User):
-    #Superuser config
+    # Superuser config
     username = 'agus'
     email = 'agusc@agusc.com.ar'
     password = 'Ferraro'
 
     u = User.objects.create_superuser(username, email, password)
 
+
 def mercadopago_setup(MPAccount):
-    #Mercadopago config
+    # Mercadopago config
     acc = MPAccount()
     acc.name = "Creame3DMP"
     acc.slug = "C3DMP"
@@ -27,11 +29,12 @@ def mercadopago_setup(MPAccount):
     acc.save()
     print("Mecadopago added")
 
-def social_accounts_config(Site,SocialApp):
-    #Social accounts config
+
+def social_accounts_config(Site, SocialApp):
+    # Social accounts config
     ##Site onfig
     Site.objects.all()[0].delete()
-    site = Site.objects.get_or_create(domain=settings.CURRENT_HOST,name=settings.CURRENT_HOST,id=1)[0]
+    site = Site.objects.get_or_create(domain=settings.CURRENT_HOST, name=settings.CURRENT_HOST, id=1)[0]
     ##Google Config
     o = SocialApp()
     o.provider = "google"
@@ -52,8 +55,9 @@ def social_accounts_config(Site,SocialApp):
     o.save()
     print("Social accounts created")
 
+
 def thingiverse_apikeys_setup(ApiKey):
-    #ApiKeys (Thingiverse) population
+    # ApiKeys (Thingiverse) population
     ***REMOVED***
     ***REMOVED***
     ***REMOVED***
@@ -67,15 +71,32 @@ def thingiverse_apikeys_setup(ApiKey):
 
     print("API Keys (Thingiverse) added")
 
-def populate_categories(request_from_thingi,settings,CategoriaThigi):
+
+def prepare_proxy(adjust_proxy_scaling):
+    global time
+    adjust_proxy_scaling()
+    reqok = False
+    while not reqok:
+        try:
+            base_categories = request_from_thingi('categories')
+            reqok = True
+        except:
+            time.sleep(1)
+
+
+def populate_categories(request_from_thingi, settings, CategoriaThigi, adjust_proxy_scaling):
     print("Populando categorias")
-    #Categorias base en Thingiverse. No deberian cambiar
+    # Proxy warmup
+    if settings.USE_SCAPOXY:
+        prepare_proxy(adjust_proxy_scaling)
+    # Categorias base en Thingiverse. No deberian cambiar
     base_categories = request_from_thingi('categories')
     for bcat in base_categories:
         category_info = request_from_thingi(bcat['url'].split(settings.THINGIVERSE_API_ENDPOINT)[1])
         parent = CategoriaThigi.objects.create(name=category_info['name'])
         for child in category_info['children']:
-            CategoriaThigi.objects.create(name=child['name'],parent=parent)
+            CategoriaThigi.objects.create(name=child['name'], parent=parent)
+
 
 def colors_setup(Color, settings):
     global subprocess, File, os
@@ -83,25 +104,29 @@ def colors_setup(Color, settings):
         import os, subprocess
         from django.core.files import File
     print("Initiating colors population...")
-    #Color population
-    color_list = [('Blanco','FFFFFF'),('Verde oscuro','013100'),('Verde claro','12B50C'),('Celeste','0A73B8'),('Amarillo','FFF208'),('Azul','0954F5'),('Naranja','FF8400'),('Rojo','793A00'),('Gris','606060'),('Negro','000000')]
+    # Color population
+    color_list = [('Blanco', 'FFFFFF'), ('Verde oscuro', '013100'), ('Verde claro', '12B50C'), ('Celeste', '0A73B8'),
+                  ('Amarillo', 'FFF208'), ('Azul', '0954F5'), ('Naranja', 'FF8400'), ('Rojo', '793A00'),
+                  ('Gris', '606060'), ('Negro', '000000')]
     for name, code in color_list:
-        color = Color.objects.create(name=name,code=code)
-        #Convertimos el par obj, mtl a SFB
-        args = [settings.BASE_DIR + '/lib/sceneform_sdk/linux/converter','-d','--mat',settings.BASE_DIR + '/lib/sceneform_sdk/default_materials/obj_material.sfm',
-        '--outdir', settings.BASE_DIR + '/tmp/',settings.BASE_DIR + '/resources/colors_reference/' + code + '.obj']
-        proc = subprocess.run(args,universal_newlines = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-        #Se proceso correctamente?
+        color = Color.objects.create(name=name, code=code)
+        # Convertimos el par obj, mtl a SFB
+        args = [settings.BASE_DIR + '/lib/sceneform_sdk/linux/converter', '-d', '--mat',
+                settings.BASE_DIR + '/lib/sceneform_sdk/default_materials/obj_material.sfm',
+                '--outdir', settings.BASE_DIR + '/tmp/',
+                settings.BASE_DIR + '/resources/colors_reference/' + code + '.obj']
+        proc = subprocess.run(args, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Se proceso correctamente?
         for line in proc.stdout.splitlines():
             if 'Wrote SFB to' in line:
                 break
         else:
             print(proc)
             print("Error al exportar SFB para el color {}".format(name))
-        #Devolvemos el path del sfb
+        # Devolvemos el path del sfb
         sfb_path = settings.BASE_DIR + '/tmp/' + code + '.sfb'
-        with open(sfb_path,'rb') as f:
-            color.sfb_color_reference.save(code + '.sfb',File(f))
+        with open(sfb_path, 'rb') as f:
+            color.sfb_color_reference.save(code + '.sfb', File(f))
         os.remove(sfb_path)
     print("Colors added")
 
@@ -109,7 +134,8 @@ def colors_setup(Color, settings):
 def prusa_profiles_setup():
     global slaicer_models, requests, ContentFile
     # Content file creation
-    cf = slaicer_models.ConfigurationFile.objects.create(name='Prusa-settings', version='0.4.5', vendor='Prusa', provider='https://raw.githubusercontent.com/prusa3d/Slic3r-settings/master/live/PrusaResearch/0.4.5.ini')
+    cf = slaicer_models.ConfigurationFile.objects.create(name='Prusa-settings', version='0.4.5', vendor='Prusa',
+                                                         provider='https://raw.githubusercontent.com/prusa3d/Slic3r-settings/master/live/PrusaResearch/0.4.5.ini')
     r = requests.get('https://raw.githubusercontent.com/prusa3d/Slic3r-settings/master/live/PrusaResearch/0.4.5.ini')
     cf.file.save('prusa.ini', ContentFile(r.content))
     cf.import_available_profiles()
@@ -129,11 +155,14 @@ def prusa_profiles_setup():
     printer_imported_profile.bed_shape = [600, 600, 600]
     printer_imported_profile.save()
     # Quoting profile creation
-    slaicer_models.SliceConfiguration.objects.create(printer=slaicer_models.PrinterProfile.objects.last(), material=slaicer_models.MaterialProfile.objects.last(), quoting_profile=True)
+    slaicer_models.SliceConfiguration.objects.create(printer=slaicer_models.PrinterProfile.objects.last(),
+                                                     material=slaicer_models.MaterialProfile.objects.last(),
+                                                     quoting_profile=True)
     print("Quoting profiles added")
 
+
 def testing_objects_setup():
-    #Object population (for testing)
+    # Object population (for testing)
     valid_input = False
     while not valid_input:
         print("\nImporto objetos de ejemplo? (slicerapi debe estar prendido)")
@@ -156,6 +185,7 @@ def testing_objects_setup():
 if __name__ == '__main__':
     print('\n' + ('=' * 80) + '\n')
     import django
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE',
                           'dbcreame.settings')
     django.setup()
@@ -165,7 +195,7 @@ if __name__ == '__main__':
     from allauth.socialaccount.models import Site, SocialApp
     from django_mercadopago.models import Account as MPAccount
     from thingiverse.models import *
-    from thingiverse.tasks import request_from_thingi
+    from thingiverse.tasks import request_from_thingi, adjust_proxy_scaling
     from db.models import *
     from django.core.files import File
     from django.core.files.base import ContentFile
@@ -174,6 +204,8 @@ if __name__ == '__main__':
     import requests
     import os
     import subprocess
+    import time
+
     print('Populating Database...')
     print('----------------------\n')
 
@@ -183,9 +215,9 @@ if __name__ == '__main__':
 
     superuser_setup(User)
     mercadopago_setup(MPAccount)
-    social_accounts_config(Site,SocialApp)
+    social_accounts_config(Site, SocialApp)
     thingiverse_apikeys_setup(ApiKey)
-    populate_categories(request_from_thingi,settings,CategoriaThigi)
+    populate_categories(request_from_thingi, settings, CategoriaThigi, adjust_proxy_scaling)
     colors_setup(Color, settings)
     prusa_profiles_setup()
     testing_objects_setup()

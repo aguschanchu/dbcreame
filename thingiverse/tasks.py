@@ -30,7 +30,7 @@ logger = get_task_logger(__name__)
 
 
 def get_connection_pool():
-    retry_policy = Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501)).remove(407))
+    retry_policy = Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501)))
     timeout_policy = Timeout(read=10, connect=5)
 
     if settings.USE_SCAPOXY:
@@ -46,7 +46,7 @@ def adjust_proxy_scaling():
     r = requests.patch(url='http://localhost:8889/api/scaling', data=json.dumps(payload), headers=headers)
 
 @shared_task(bind=True, queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
-def request_from_thingi(self, url,content=False,params=''):
+def request_from_thingi(self, url, content=False,params=''):
     global logger
     endpoint = settings.THINGIVERSE_API_ENDPOINT
     http = get_connection_pool()
@@ -56,25 +56,21 @@ def request_from_thingi(self, url,content=False,params=''):
             if k != None:
                 if not content:
                     r = http.request('GET',endpoint+quote(url)+'?access_token='+k+params)
-                    if r.status == 407 and settings.USE_SCAPOXY:
-                        adjust_proxy_scaling()
-                        raise self.retry(countdown=5)
                     r = json.loads(r.data.decode('utf-8'))
-
                 else:
                     r = http.request('GET',endpoint+url+'?access_token='+k+params)
-                    if r.status == 407 and settings.USE_SCAPOXY:
-                        adjust_proxy_scaling()
-                        raise self.retry(countdown=5)
                     r = r.data
                 return r
 
         except (MaxRetryError, TimeoutError):
+            # Se trata de un error del proxy?
+            if 'ERROR: NO RUNNING INSTANCE FOUND' in traceback.format_exc().upper():
+                adjust_proxy_scaling()
+                raise self.retry(countdown=5)
             # Por algun motivo celery no maneja bien estos errores. Por eso, los handleo, y re-raise otro tipo de error
             traceback.print_exc()
             logger.warning("Error al realizar request")
             raise ValueError
-
 
         time.sleep(1)
         print('No encontre API keys')
