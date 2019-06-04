@@ -42,8 +42,14 @@ def get_connection_pool():
 
 def adjust_proxy_scaling():
     headers = {'Authorization': base64.b64encode(str.encode(settings.SCRAPOXY_PASSWORD)), 'Content-type': 'application/json'}
-    payload = {"downscaleDelay": 600000, "min": 0, "max": 7, "required": 1}
-    r = requests.patch(url='http://localhost:8889/api/scaling', data=json.dumps(payload), headers=headers)
+    # Check for actual status
+    try:
+        r = requests.get('http://localhost:8889/api/scaling', headers=headers).json()
+    except:
+        raise ValueError("Error on connecting to proxy manager")
+    if r['required'] == 0:
+        payload = {"downscaleDelay": 600000, "min": 0, "max": 7, "required": 1}
+        r = requests.patch(url='http://localhost:8889/api/scaling', data=json.dumps(payload), headers=headers)
 
 @shared_task(bind=True, queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
 def request_from_thingi(self, url, content=False,params=''):
