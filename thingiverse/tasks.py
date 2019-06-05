@@ -54,7 +54,7 @@ class ProxyErrorCode(Exception):
     """ Used for error tracking """
 
 
-@shared_task(queue='http',autoretry_for=(TypeError, ValueError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError, ValueError), retry_backoff=True, max_retries=50, retry_jitter=True)
 def request_from_thingi(url, content=False, params=''):
     global logger
     endpoint = settings.THINGIVERSE_API_ENDPOINT
@@ -65,7 +65,7 @@ def request_from_thingi(url, content=False, params=''):
             for tries in range(1, 3):
                 try:
                     if not content:
-                        r = http.request('GET', endpoint+quote(url)+'?access_token='+k+params)
+                        r = http.request('GET', endpoint+url+'?access_token='+k+params)
                         if r.status == 407:
                             raise ProxyError
                         r = json.loads(r.data.decode('utf-8'))
@@ -98,7 +98,7 @@ def request_from_thingi(url, content=False, params=''):
         raise ValueError("Error al hacer la request ¿hay API keys disponibles?")
 
 
-@shared_task(queue='http',autoretry_for=(TypeError,ValueError,KeyError,MaxRetryError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError,KeyError,MaxRetryError), retry_backoff=True, max_retries=50, retry_jitter=True)
 def get_thing_categories_list(thingiid):
     endpoint = settings.THINGIVERSE_API_ENDPOINT
     rcat = request_from_thingi('things/{}/categories'.format(thingiid))
@@ -130,7 +130,7 @@ def get_thing_categories_list(thingiid):
                 result.append(category_name)
     return result
 
-@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=100, retry_jitter=True)
 def download_file(url, thingiid = None):
     http = get_connection_pool()
     path = 'tmp/'+''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + '.stl'
@@ -189,7 +189,7 @@ def add_object_from_thingiverse_chain(thingiid, file_list = None, debug = True, 
         res |= add_files_to_thingiverse_object.s(file_list)
     return res
 
-@shared_task(queue='http', bind=True,autoretry_for=(TypeError,ValueError,KeyError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http', bind=True,autoretry_for=(TypeError,ValueError,KeyError), retry_backoff=True, max_retries=50, retry_jitter=True)
 def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
     global logger
     print("Iniciando descarga de "+str(thingiid))
@@ -281,7 +281,7 @@ def download_images_task_group(it, partial, priority):
     else:
         return (it[0],0)
 
-@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50, retry_jitter=True)
 def download_image(objeto_id, url, main):
     objeto = modelos.Objeto.objects.get(pk=objeto_id)
     imagen = modelos.Imagen()
@@ -295,7 +295,7 @@ def download_image(objeto_id, url, main):
     imagen.save()
     return objeto_id
 
-@shared_task(autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
+@shared_task(autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50, retry_jitter=True)
 def apply_thing_filter(object_id):
     objeto = modelos.Objeto.objects.get(pk=object_id)
     extattr = objeto.external_id.thingiverse_attributes
@@ -330,7 +330,7 @@ def apply_thing_filter(object_id):
 
     return object_id
 
-@shared_task(bind=True, max_retries=50)
+@shared_task(bind=True, max_retries=120, retry_backoff=True, retry_jitter=True)
 def apply_thing_objects_filter(self, object_id):
     try:
         objeto = modelos.Objeto.objects.get(pk=object_id)
@@ -341,7 +341,7 @@ def apply_thing_objects_filter(self, object_id):
     # Necesitamos que esten todos los archivos cotizados, para lanzar este filtro
     for f in objeto.files.all():
         if not f.quote_ready():
-            raise self.retry(countdown=5)
+            raise self.retry()
 
     file_list_modified = False
     # Aplicamos el filtro de archivos
@@ -363,7 +363,7 @@ def apply_thing_objects_filter(self, object_id):
 
     return object_id
 
-@shared_task(bind=True, autoretry_for=(MaxRetryError, ConnectionResetError), retry_backoff=True, max_retries=50)
+@shared_task(bind=True, autoretry_for=(MaxRetryError, ConnectionResetError), retry_backoff=True, max_retries=120, retry_jitter=True)
 def add_files_to_thingiverse_object(self, object_id, file_list = None, override = False, debug = True):
         allowed_extensions = ['.stl', '.obj']
         try:
@@ -417,12 +417,14 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
                             ObjetoThingiSubtask.objects.create(parent_task=task, celery_id=st.id)
             else:
                 print("Los archivos no estan listos, comprobamos en 5s nuevamente")
-                raise self.retry(countdown=5)
+                raise self.retry()
 
         ### Termino el grupo de trabajo?
         if task.update_subtask_status() == False:
             print("Los archivos no estan listos, comprobamos en 5s nuevamente")
-            raise self.retry(countdown=5)
+            raise self.retry()
+
+
 
         ### Ok, termino. Agregamos los archivos al objeto, y continuamos
         archivos_link = task.update_subtask_status()

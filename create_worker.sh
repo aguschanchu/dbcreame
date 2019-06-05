@@ -36,7 +36,7 @@ User=agus
 Group=agus
 WorkingDirectory=/home/agus/dbcreame
 Environment='PATH=/home/agus/anaconda3/bin:/usr/local/bin:/usr/bin:/bin'
-ExecStart=/home/agus/anaconda3/bin/celery -A dbcreame worker -l info -E -Ofair -Q slaicer --concurrency=2 -n slaicer@%%h
+ExecStart=/home/agus/anaconda3/bin/celery -A dbcreame worker -l info -E -Ofair -Q slaicer --concurrency=1 -n slaicer@%%h
 
 [Install]
 WantedBy=multi-user.target
