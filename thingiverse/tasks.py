@@ -65,12 +65,12 @@ def request_from_thingi(url, content=False, params=''):
             for tries in range(1, 3):
                 try:
                     if not content:
-                        r = http.request('GET', endpoint+url+'?access_token='+k+params)
+                        r = http.request('GET', endpoint+quote(url)+'?access_token='+k+params)
                         if r.status == 407:
                             raise ProxyError
                         r = json.loads(r.data.decode('utf-8'))
                     else:
-                        r = http.request('GET', endpoint+url+'?access_token='+k+params)
+                        r = http.request('GET', endpoint+quote(url)+'?access_token='+k+params)
                         if r.status == 407:
                             raise ProxyError
                         r = r.data
@@ -89,6 +89,8 @@ def request_from_thingi(url, content=False, params=''):
                 except (ProxyErrorCode, ProxyError):
                     adjust_proxy_scaling()
                     time.sleep(10)
+                except json.decoder.JSONDecodeError:
+                    raise ValueError
         else:
             time.sleep(1)
             print('No encontre API keys')
