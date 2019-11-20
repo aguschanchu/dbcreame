@@ -16,16 +16,20 @@ import shutil
 import trimesh
 import googlemaps
 import unicodedata
+from numpy import mean, polyfit
+from random import uniform
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save, pre_save, m2m_changed
 from django.dispatch import receiver
 from django.conf import settings
 from google.cloud import translate
 from django_mercadopago import models as MPModels
-from django.core.validators import MinLengthValidator
+from django.core.validators import MinLengthValidator, MinValueValidator, MaxValueValidator
 from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToFit
-
+from db.tools import price_calculator
+import mercadopago
+from slaicer.models import SliceJob, GeometryModel
 
 '''
 Modelos internos (almacenados en la DB)
@@ -94,24 +98,51 @@ def translate_tag_signal(sender, instance, created, **kwargs):
 
 class Polinomio(models.Model):
     #Polinomio en forma p(x) = \sum^0_{n=0} a_n x^n
-    a0 = models.FloatField(default=0)
+    a0 = models.FloatField(default=None, null=True)
     a1 = models.FloatField(default=0)
     a2 = models.FloatField(default=0)
     a3 = models.FloatField(default=0)
     a4 = models.FloatField(default=0)
     a5 = models.FloatField(default=0)
-    plot = models.ImageField(upload_to='images/plots',null=True,blank=True)
+    plot = models.ImageField(upload_to='images/plots', null=True, blank=True)
 
     def __str__(self):
         return "{} x^5+ {} x^4+ {} x^3+ {} x^2+ {} x+ {}".format(self.a5,self.a4,self.a3,self.a2,self.a1,self.a0)
 
-    def coefficients_list(self):
-        return [self.a5,self.a4,self.a3,self.a2,self.a1,self.a0]
+    @property
+    def ready(self):
+        return self.a0 != None
 
-@receiver(post_save, sender=Polinomio)
-def plot_poly(sender, instance, update_fields, **kwargs):
-    if update_fields == None:
-        polyplot(instance)
+    def coefficients_list(self):
+        return [self.a5, self.a4, self.a3, self.a2, self.a1, self.a0]
+
+    def build_poly(self):
+        # Estan todos los puntos listos?
+        if any([not point.quote.ready() for point in self.data.all()]):
+            return None
+        results = {point.scale: point.quote.build_time for point in self.data.all() if point.quote.build_time is not None}
+        print(results)
+        p = polyfit(list(results.keys()), list(results.values()), 3)
+        self.a0 = p.tolist()[3]
+        self.a1 = p.tolist()[2]
+        self.a2 = p.tolist()[1]
+        self.a3 = p.tolist()[0]
+        self.save()
+        # Actualizamos el grafico
+        polyplot(self)
+
+
+# Usado para interpolar el polinomio
+class PolinomioPunto(models.Model):
+    quote = models.OneToOneField(SliceJob, on_delete=models.CASCADE)
+    scale = models.FloatField()
+    poly = models.ForeignKey(Polinomio, related_name='data', on_delete=models.CASCADE)
+
+@receiver(post_save, sender=SliceJob)
+def check_for_poly_completion(sender, instance, update_fields, **kwargs):
+    if hasattr(instance, 'polinomiopunto'):
+        instance.polinomiopunto.poly.build_poly()
+
 
 class Color(models.Model):
     name = models.CharField(max_length=100)
@@ -170,6 +201,8 @@ class Objeto(models.Model):
     origin = models.CharField(choices=origenes,max_length=30,null=True)
     #Fueron descargados los STL? (y objetos relacionados con este)
     partial = models.BooleanField(default=False)
+    #Review inicial, utilizada en caso
+    points_initial_value = models.FloatField(default=float(round(uniform(3.8, 4.5),2)))
 
     @property
     def main_image(self):
@@ -188,6 +221,17 @@ class Objeto(models.Model):
     @property
     def score(self):
         return score.score_object(self)
+
+    @property
+    def points(self):
+        if Valoracion.objects.filter(object_id=self).exists():
+            return mean([v.points for v in Valoracion.objects.filter(object_id=self)])
+        else:
+            return self.points_initial_value
+
+    @property
+    def comments(self):
+        return Comentario.objects.filter(object_id=self).order_by('creation_date')[:5]
 
     def suggested_color(self):
         if self.default_color != None:
@@ -220,15 +264,15 @@ class Objeto(models.Model):
         return round(sum([sum(a.time_as_a_function_of_scale.coefficients_list()) for a in self.files.all()]))
 
     def min_dimension(self):
-        if not self.partial:
+        try:
             return min([a.size_x_default for a in self.files.all()]+[a.size_y_default for a in self.files.all()]+[a.size_z_default for a in self.files.all()])
-        else:
+        except:
             return None
 
     def max_dimension(self):
-        if not self.partial:
+        try:
             return max([a.size_x_default for a in self.files.all()]+[a.size_y_default for a in self.files.all()]+[a.size_z_default for a in self.files.all()])
-        else:
+        except:
             return None
 
     @staticmethod
@@ -253,23 +297,44 @@ Modelos accesorios
 
 class ArchivoSTL(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    file = models.FileField(upload_to='stl/')
+    model = models.OneToOneField(GeometryModel, on_delete=models.CASCADE)
+    quote = models.OneToOneField(SliceJob, on_delete=models.CASCADE, null=True)
     object = models.ForeignKey(Objeto,blank=True,null=True,on_delete=models.CASCADE,related_name='files')
-    #Tiempo de impresion en escala 1, en segundos
-    printing_time_default = models.IntegerField(default=0)
-    time_as_a_function_of_scale = models.ForeignKey(Polinomio,on_delete=models.SET_NULL,null=True)
-    #Dimensiones del objeto en escala 1, en mm
-    size_x_default = models.FloatField(default=10)
-    size_y_default = models.FloatField(default=10)
-    size_z_default = models.FloatField(default=10)
-    #Peso del objeto en escala 1, en g
-    weight_default = models.FloatField(default=10)
+    time_as_a_function_of_scale = models.OneToOneField(Polinomio, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
-        return self.file.name
+        return self.model.file.name
 
-    def name(self):
-        return self.file.name
+    def quote_ready(self):
+        return self.quote.ready() if self.quote is not None else False
+
+    @property
+    def file(self):
+        return self.model.get_model_path()
+
+    #Tiempo de impresion en escala 1, en segundos
+    @property
+    def printing_time_default(self):
+        return self.quote.build_time
+
+    #Dimensiones del objeto en escala 1, en mm
+    @property
+    def size_x_default(self):
+        return self.model.orientation.size_x
+
+    @property
+    def size_y_default(self):
+        return self.model.orientation.size_x
+
+    @property
+    def size_z_default(self):
+        return self.model.orientation.size_x
+
+    #Peso del objeto en escala 1, en g
+    @property
+    def weight_default(self):
+        return self.quote.weight
+
 
 class Imagen(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -319,9 +384,9 @@ class ModeloAR(models.Model):
     #Si el modelo tiene un unico objeto, el STL combinado, es el mismo
     def check_for_single_object_file(self):
         if len(self.object.files.all()) == 1:
-            self.combined_stl = self.object.files.all()[0].file
+            self.combined_stl = self.object.files.all()[0].model.file
             self.human_flag = True
-            self.save(update_fields=['combined_stl','human_flag'])
+            self.save(update_fields=['combined_stl', 'human_flag'])
             self.calculate_combined_dimensions()
             return True
         else:
@@ -329,23 +394,21 @@ class ModeloAR(models.Model):
 
     def arrange_and_combine_files(self):
         res = stl_to_sfb.combine_stls_files(self.object)
-        with open(res+'/plate00.stl','rb') as f:
-            self.combined_stl.save(self.object.name+'.stl',File(f),save=False)
+        with open(res+'/plate00.stl', 'rb') as f:
+            self.combined_stl.save(self.object.name+'.stl', File(f), save=False)
             self.save(update_fields=['combined_stl'])
         shutil.rmtree(res)
 
     def combine_stl(self):
         new_file = stl_to_sfb.combine_stl_with_correct_coordinates(self)
-        #Borramos el archivo anterior
-        #self.combined_stl.delete()
-        self.combined_stl.save(name,new_file,save=False)
+        self.combined_stl.save(self.combined_stl.name, new_file, save=False)
         #Ejecutamos la funcion de guardar a parte, para que evitar un loop infinito con los signals
         self.save(update_fields=['combined_stl','human_flag'])
         #Actualizamos el tamaño del objeto
         self.calculate_combined_dimensions()
 
-    def create_sfb(self,generate=False):
-        if not self.combined_stl.name:
+    def create_sfb(self, generate=False, force_generation=False):
+        if not self.combined_stl.name or force_generation:
             #No tenemos STL combinado. Intentamos generarlo?
             if generate:
                 if not self.check_for_single_object_file():
@@ -353,18 +416,18 @@ class ModeloAR(models.Model):
             else:
                 return False
         #Creamos ambos SFB
-        for field, fieldname, rotate in [(self.sfb_file,'sfb_file',False),(self.sfb_file_rotated,'sfb_file_rotated',True)]:
-            sfb_path = stl_to_sfb.convert(settings.BASE_DIR+self.combined_stl.url,self.combined_stl.name,rotate)
+        for field, fieldname, rotate in [(self.sfb_file, 'sfb_file', False), (self.sfb_file_rotated, 'sfb_file_rotated', True)]:
+            sfb_path = stl_to_sfb.convert(self.combined_stl.path, self.combined_stl.name, rotate)
             with open(sfb_path,'rb') as f:
-                field.save(sfb_path.split('/')[-1],File(f),save=False)
+                field.save(sfb_path.split('/')[-1], File(f), save=False)
                 self.save(update_fields=[fieldname])
                 os.remove(sfb_path)
 
     def calculate_combined_dimensions(self):
         #Calcula la bounding_box sin orientar. Se puede cambiar por  .bounding_box_oriented.primitive.transform
         if self.human_flag:
-            self.combined_size_x, self.combined_size_y, self.combined_size_z = list(trimesh.load(settings.BASE_DIR+self.combined_stl.url).bounding_box.extents)
-            self.save(update_fields=['combined_size_x','combined_size_y','combined_size_z'])
+            self.combined_size_x, self.combined_size_y, self.combined_size_z = list(trimesh.load(self.combined_stl.path).bounding_box.extents)
+            self.save(update_fields=['combined_size_x', 'combined_size_y', 'combined_size_z'])
 
 #Utilizados para actualizar las dimensiones del objeto al cambiar el stl_combinado
 @receiver(post_save, sender=ModeloAR)
@@ -383,7 +446,7 @@ class ModeloARRender(models.Model):
             return False
         png_path = render_image(self.model_ar)
         with open(png_path,'rb') as f:
-            self.image_render.save(self.model_ar.combined_stl.name.split('.')[0],File(f))
+            self.image_render.save(self.model_ar.combined_stl.name.split('.')[0], File(f))
         os.remove(png_path)
 
 #Utilizados para actualizar el render al cambiar el ModeloAR
@@ -444,26 +507,29 @@ def update_object_like_count(sender, **kwargs):
 class DireccionDeEnvio(models.Model):
     #Corresponde al place_id de gmaps
     gmaps_id = models.CharField(max_length=150)
-    notes = models.CharField(max_length=300,blank=True,default=None,null=True)
+    notes = models.CharField(max_length=300,blank=True, default=None, null=True)
     usuario = models.ForeignKey(Usuario,on_delete=models.CASCADE,related_name='address_book')
-    last_time_used = models.DateTimeField(default=timezone.now,blank=True)
+    last_time_used = models.DateTimeField(default=timezone.now, blank=True)
     #Cacheamos la direccion para evitar queries al pedo
-    long_address = models.CharField(max_length=300,default=None,null=True)
+    long_address = models.CharField(max_length=300,default=None, null=True)
+    postal_code = models.CharField(max_length=10, default=None, null=True)
 
     class Meta:
         ordering = ['last_time_used']
 
     #Obtenemos la long_address de googlemaps
-    def update_long_address(self):
+    def update_long_address_and_postal_code(self):
         client = googlemaps.Client(key=settings.GOOGLE_MAPS_API_KEY)
-        result = client.reverse_geocode(self.gmaps_id)[0]['formatted_address']
-        self.long_address = result
-        self.save(update_fields=['long_address'])
+        result = client.reverse_geocode(self.gmaps_id)[0]
+        self.long_address = result['formatted_address']
+        self.postal_code = ''.join(filter(lambda x: x.isdigit(), [x['long_name'] for x in result['address_components'] if 'postal_code' in x['types']][0]))
+        self.save(update_fields=['long_address', 'postal_code'])
 
     def short_address(self):
         if not self.long_address:
             self.update_long_address()
         return self.long_address.split(',')[0]
+
 
 class Compra(models.Model):
     estados = (
@@ -473,7 +539,7 @@ class Compra(models.Model):
         ('printing', 'Imprimiendo'),
         ('shipped', 'Enviado'),
         ('completed', 'Completado'),
-        ('canceled', 'Cancelado'),
+        ('cancelled', 'Cancelado'),
         ('error' , 'Error')
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,blank=True)
@@ -481,7 +547,25 @@ class Compra(models.Model):
     date = models.DateTimeField(default=timezone.now,blank=True)
     status = models.CharField(choices=estados,max_length=300,blank=True,default='checkout-pending')
     delivery_address = models.ForeignKey(DireccionDeEnvio,null=True,on_delete=models.SET_NULL,blank=True)
-    payment_preferences = models.OneToOneField(MPModels.Preference,on_delete=models.CASCADE,blank=True,null=True)
+    payment_preferences = models.OneToOneField(MPModels.Preference,on_delete=models.CASCADE, blank=True, null=True)
+
+    def create_payment_preference(self):
+        # Creamos la preferencia de pago de MP
+        precio_total = price_calculator.get_order_price(self) + price_calculator.get_shipping_price(self)
+        mp_account = MPModels.Account.objects.first()
+        self.payment_preferences = MPModels.Preference.objects.create(
+            title='Compra del {}'.format(self.date),
+            price=precio_total,
+            description='Compra en Creame3D',
+            reference=str(self.id),
+            account=mp_account)
+        # MP requiere email y nombre del comprador, de modo, que ingresamos esos datos
+        mp_client = mercadopago.MP(mp_account.app_id, mp_account.secret_key)
+        user = self.buyer.user
+        preference = {
+            'payer': {'email': user.email if user.email != '' else 'compras@creame3d.com', 'name': user.username}}
+        preferenceResult = mp_client.update_preference(self.payment_preferences.mp_id, preference)
+        self.save()
 
 @receiver(post_save, sender=MPModels.Preference)
 def check_mp_for_payment_status(sender, instance, created, **kwargs):
@@ -517,7 +601,7 @@ def update_suggested_color(sender, instance, created, **kwargs):
     if created:
         instance.object_id.update_popular_color()
 
-'''
+'''-
 Modelos de trackeo
 '''
 
@@ -531,3 +615,24 @@ class SfbRotationTracker(models.Model):
 def update_rotated_sfb(sender, instance, created, **kwargs):
     if created:
         instance.object.modeloar.calculate_rotated()
+
+'''
+Modelos de comentarios / valoraciones
+'''
+
+class Comentario(models.Model):
+    object_id = models.ForeignKey(Objeto, on_delete=models.CASCADE)
+    user = models.ForeignKey(Usuario, on_delete=models.CASCADE, blank=True)
+    comment = models.TextField()
+    creation_date = models.DateTimeField(default=timezone.now)
+
+    @property
+    def name(self):
+        return self.user.user.first_name
+
+
+class Valoracion(models.Model):
+    object_id = models.ForeignKey(Objeto, on_delete=models.CASCADE)
+    user = models.ForeignKey(Usuario, on_delete=models.CASCADE, blank=True)
+    points = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+

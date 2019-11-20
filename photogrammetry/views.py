@@ -18,3 +18,7 @@ class ViewJob(generics.RetrieveAPIView):
         id = self.kwargs.get(self.lookup_url_kwarg)
         objeto = Escaneo.objects.get(id=id)
         return objeto
+
+    def post(self, request, *args, **kwargs):
+        print(request.data)
+        return self.create(request, *args, **kwargs)

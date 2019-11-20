@@ -3,5 +3,9 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/simarrange" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/slaicer/lib/Slic3r" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/slaicer/lib/Slic3r/build/googletest-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/slaicer/lib/Slic3r/build/nlopt-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/slaicer/lib/Tweaker-3" vcs="Git" />
   </component>
 </project>

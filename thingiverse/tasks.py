@@ -12,8 +12,8 @@ from django.conf import settings
 import json
 import urllib3
 from urllib3.util import Retry
-from urllib3 import PoolManager, Timeout
-from urllib3.exceptions import MaxRetryError, TimeoutError
+from urllib3 import PoolManager, ProxyManager, Timeout
+from urllib3.exceptions import MaxRetryError, TimeoutError, ProxyError
 import pickle
 urllib3.disable_warnings()
 from celery.task import control
@@ -21,42 +21,86 @@ from celery.exceptions import SoftTimeLimitExceeded, MaxRetriesExceededError
 import dateutil.parser
 from .filters.things_filter import *
 from .filters.things_files_filter import thing_files_filter
-
-
+from slaicer.models import GeometryModel, SliceJob
+import numpy as np
+import base64
 from celery.utils.log import get_task_logger
+import requests
 logger = get_task_logger(__name__)
 
-@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
-def request_from_thingi(url,content=False,params=''):
+def get_connection_pool():
+    retry_policy = Retry(total=5, backoff_factor=0.1, status_forcelist=[x for x in range(405, 501) if x not in [407]])
+    timeout_policy = Timeout(read=10, connect=5)
+    if settings.USE_SCAPOXY:
+        http = ProxyManager('http://localhost:8888', retries= retry_policy, timeout = timeout_policy)
+    else:
+        http = PoolManager(retries= retry_policy, timeout = timeout_policy)
+    return http
+
+
+def adjust_proxy_scaling():
+    headers = {'Authorization': base64.b64encode(str.encode(settings.SCRAPOXY_PASSWORD)), 'Content-type': 'application/json'}
+    # Check for actual status
+    try:
+        r = requests.get('http://localhost:8889/api/scaling', headers=headers).json()
+    except:
+        raise ValueError("Error on connecting to proxy manager")
+    if r['required'] == 0:
+        payload = {"downscaleDelay": 30*60*1000, "min": 0, "max": settings.SCRAPOXY_MAX_SCALE, "required": 1}
+        requests.patch(url='http://localhost:8889/api/scaling', data=json.dumps(payload), headers=headers)
+
+
+class ProxyErrorCode(Exception):
+    """ Used for error tracking """
+
+
+@shared_task(queue='http',autoretry_for=(TypeError, ValueError), retry_backoff=True, max_retries=50, retry_jitter=True)
+def request_from_thingi(url, content=False, params=''):
     global logger
     endpoint = settings.THINGIVERSE_API_ENDPOINT
-    http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(405,501))),
-                       timeout = Timeout(read=10, connect=5)
-                       )
-    for _ in range(0,60):
+    http = get_connection_pool()
+    for _ in range(0, 60):
         k = ApiKey.get_api_key()
-        try:
-            if k != None:
-                if not content:
-                    r = json.loads(http.request('GET',endpoint+quote(url)+'?access_token='+k+params).data.decode('utf-8'))
-                else:
-                    r = http.request('GET',endpoint+url+'?access_token='+k+params).data
-                return r
-        except (MaxRetryError, TimeoutError):
-            # Por algun motivo celery no maneja bien estos errores. Por eso, los handleo, y re-raise otro tipo de error
-            traceback.print_exc()
-            logger.warning("Error al realizar request")
-            raise ValueError
+        if k is not None:
+            for tries in range(1, 3):
+                try:
+                    if not content:
+                        r = http.request('GET', endpoint+quote(url)+'?access_token='+k+params)
+                        if r.status == 407:
+                            raise ProxyError
+                        r = json.loads(r.data.decode('utf-8'))
+                    else:
+                        r = http.request('GET', endpoint+quote(url)+'?access_token='+k+params)
+                        if r.status == 407:
+                            raise ProxyError
+                        r = r.data
+                    return r
 
+                except (MaxRetryError, TimeoutError) as e:
+                    if hasattr(e, 'reason'):
+                        if type(e.reason) == ProxyError:
+                            adjust_proxy_scaling()
+                            time.sleep(10)
+                    else:
+                        # Por algun motivo celery no maneja bien estos errores. Por eso, los handleo, y re-raise otro tipo de error
+                        logger.warning("Error al realizar request")
+                        raise ValueError
 
-        time.sleep(1)
-        print('No encontre API keys')
+                except (ProxyErrorCode, ProxyError):
+                    adjust_proxy_scaling()
+                    time.sleep(10)
+                except json.decoder.JSONDecodeError:
+                    raise ValueError
+        else:
+            time.sleep(1)
+            print('No encontre API keys')
     else:
         traceback.print_exc()
         logger.error("Error al hacer la request ¿hay API keys disponibles?")
         raise ValueError("Error al hacer la request ¿hay API keys disponibles?")
 
-@shared_task(queue='http',autoretry_for=(TypeError,ValueError,KeyError,MaxRetryError), retry_backoff=True, max_retries=50)
+
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError,KeyError,MaxRetryError), retry_backoff=True, max_retries=50, retry_jitter=True)
 def get_thing_categories_list(thingiid):
     endpoint = settings.THINGIVERSE_API_ENDPOINT
     rcat = request_from_thingi('things/{}/categories'.format(thingiid))
@@ -88,10 +132,9 @@ def get_thing_categories_list(thingiid):
                 result.append(category_name)
     return result
 
-@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=100, retry_jitter=True)
 def download_file(url, thingiid = None):
-    http = PoolManager(retries=Retry(total=5, backoff_factor=0.1, status_forcelist=list(range(400, 501))),
-                       timeout=Timeout(connect=5))
+    http = get_connection_pool()
     path = 'tmp/'+''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + '.stl'
     try:
         with open(path,'wb') as file:
@@ -143,12 +186,12 @@ def add_object_from_thingiverse_chain(thingiid, file_list = None, debug = True, 
     ])
     #Creacion de objeto a partir de informacion descargada
     res |= add_object.s(thingiid, partial, debug, origin)
-    res |= download_images_task_group.s(partial)
+    res |= download_images_task_group.s(partial, ObjetoThingi.priority_def(origin))
     if not partial:
         res |= add_files_to_thingiverse_object.s(file_list)
     return res
 
-@shared_task(bind=True,autoretry_for=(TypeError,ValueError,KeyError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http', bind=True,autoretry_for=(TypeError,ValueError,KeyError), retry_backoff=True, max_retries=50, retry_jitter=True)
 def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
     global logger
     print("Iniciando descarga de "+str(thingiid))
@@ -227,20 +270,20 @@ def add_object(self, thingiverse_requests, thingiid, partial, debug, origin):
     return (objeto.id, [j['sizes'][12]['url'] for j in r['img']])
 
 @shared_task()
-def download_images_task_group(it,partial):
+def download_images_task_group(it, partial, priority):
     # Map a callback over an iterator and return as a group
     res = [translate_name.s(it[0])]
     #Una vez que se descargue la main image, podemos aplicar el filtro
     res.append(download_image.s(it[0],it[1].pop(0),True) | apply_thing_filter.s())
     for i in it[1]:
         res.append(download_image.s(it[0],i,False))
-    g = group(res).apply_async()
+    g = group(res).apply_async(priority = priority)
     if partial:
         return (it[0],g.id)
     else:
         return (it[0],0)
 
-@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
+@shared_task(queue='http',autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50, retry_jitter=True)
 def download_image(objeto_id, url, main):
     objeto = modelos.Objeto.objects.get(pk=objeto_id)
     imagen = modelos.Imagen()
@@ -254,7 +297,7 @@ def download_image(objeto_id, url, main):
     imagen.save()
     return objeto_id
 
-@shared_task(autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50)
+@shared_task(autoretry_for=(TypeError,ValueError), retry_backoff=True, max_retries=50, retry_jitter=True)
 def apply_thing_filter(object_id):
     objeto = modelos.Objeto.objects.get(pk=object_id)
     extattr = objeto.external_id.thingiverse_attributes
@@ -289,9 +332,42 @@ def apply_thing_filter(object_id):
 
     return object_id
 
-@shared_task(bind=True,autoretry_for=(TypeError,ValueError,MaxRetryError,ConnectionResetError), retry_backoff=True, max_retries=50)
+@shared_task(bind=True, max_retries=120, retry_backoff=True, retry_jitter=True)
+def apply_thing_objects_filter(self, object_id):
+    try:
+        objeto = modelos.Objeto.objects.get(pk=object_id)
+        extattr = objeto.external_id.thingiverse_attributes
+    except:
+        raise ValueError("Error al recuperar el archivo {}".format(object_id))
+
+    # Necesitamos que esten todos los archivos cotizados, para lanzar este filtro
+    for f in objeto.files.all():
+        if not f.quote_ready():
+            raise self.retry()
+
+    file_list_modified = False
+    # Aplicamos el filtro de archivos
+    if objeto.origin != 'human':
+        thing_files_filter(objeto)
+        ## Borramos los archivos que no pasaron el filtro
+        for f in objeto.files.all():
+            if f.informacionthingi.filter_passed == False:
+                f.object = None
+                file_list_modified = True
+                f.save(update_fields=['object'])
+
+    # Tenemos que regenerar los sfb, si modificamos la lista de archivos
+    if file_list_modified:
+        objeto.modeloar.create_sfb(generate=True, force_generation=True)
+
+    extattr.files_filter_passed = True
+    extattr.save(update_fields=['files_filter_passed'])
+
+    return object_id
+
+@shared_task(bind=True, autoretry_for=(MaxRetryError, ConnectionResetError), retry_backoff=True, max_retries=120, retry_jitter=True)
 def add_files_to_thingiverse_object(self, object_id, file_list = None, override = False, debug = True):
-        allowed_extensions = ['.stl']
+        allowed_extensions = ['.stl', '.obj']
         try:
             objeto = modelos.Objeto.objects.get(pk=object_id[0])
         except:
@@ -312,7 +388,7 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
         print("Preparando archivos")
         rfiles = request_from_thingi('things/{}/files'.format(thingiid))
         files_available_id = [a['id'] for a in rfiles]
-        if file_list == None or file_list == []:
+        if file_list is None or file_list == []:
             file_list = files_available_id
         ### Nos pasaron una lista de archivos valida?
         for id in file_list:
@@ -339,193 +415,113 @@ def add_files_to_thingiverse_object(self, object_id, file_list = None, override 
                         name = thing_file['name']
                         if any(s in name.lower() for s in allowed_extensions):
                             download_url = thing_file['download_url']
-                            st = download_file.delay(download_url+'?access_token='+ApiKey.get_api_key(), thingiid = thing_file['id'])
+                            st = download_file.s(download_url+'?access_token='+ApiKey.get_api_key(), thingiid = thing_file['id']).apply_async(priority = task.priority_get)
                             ObjetoThingiSubtask.objects.create(parent_task=task, celery_id=st.id)
             else:
-                raise self.retry(countdown=5)
-                return False
+                print("Los archivos no estan listos, comprobamos en 5s nuevamente")
+                raise self.retry()
 
         ### Termino el grupo de trabajo?
         if task.update_subtask_status() == False:
-            raise self.retry(countdown=5)
-            return False
+            print("Los archivos no estan listos, comprobamos en 5s nuevamente")
+            raise self.retry()
+
+
 
         ### Ok, termino. Agregamos los archivos al objeto, y continuamos
         archivos_link = task.update_subtask_status()
-        archivos = []
+        print('Tenemos esta lista de archivos descargados:')
+        print(archivos_link)
         for link in archivos_link:
-            try:
-                with open(link[0],'rb') as file:
-                    archivo = modelos.ArchivoSTL()
-                    archivo.file.save(objeto.external_id.repository+'-'+str(objeto.external_id.external_id)+'.stl',File(file))
+            with open(link[0], 'rb') as file:
+                #Guardamos los campos adicionales que requiere el filtro
+                info = InformacionThingi()
+                for f in rfiles:
+                    if f['id'] == link[1]:
+                        info.original_filename = f['name']
+                        info.date = dateutil.parser.parse(f['date'])
+                        info.save()
+                        info.thingi_id = link[1]
+                        break
 
-                    #Guardamos los campos adicionales que requiere el filtro
-                    info = InformacionThingi()
-                    for f in rfiles:
-                        if f['id'] == link[1]:
-                            info.original_filename = f['name']
-                            info.date = dateutil.parser.parse(f['date'])
-                            info.thingi_id = link[1]
-                            info.file = archivo
-                            info.save()
-                            break
+                # Guardamos el STL
+                geometrymodel = GeometryModel()
+                geometrymodel.file.save('{repository}-{id}-{fid}.{extension}'.format(repository=objeto.external_id.repository,
+                                                                               id=objeto.external_id.external_id,
+                                                                               fid=link[1],
+                                                                               extension=f['name'].split('.')[-1]), File(file))
+                geometrymodel.save()
+                archivo = modelos.ArchivoSTL(model=geometrymodel,
+                                             time_as_a_function_of_scale=modelos.Polinomio.objects.create(),
+                                             object=objeto)
 
-                    archivos.append(archivo)
-                    os.remove(link[0])
-                    task.remove_subtask_by_result(link)
-            except:
-                print(link)
-                traceback.print_exc()
-                raise ValueError
-        try:
-            ### Tenemos los archivos descargados. Necesitamos completar su tiempo de imp, peso, dimensiones
-            print("Ejecutando trabajos de sliceo")
-            slicer_jobs_ids = {}
-            slicer_jobs_ids_poly = {}
-            for archivo in archivos:
-                archivos_r = {'file': archivo.file.open(mode='rb')}
-                rf = requests.post(settings.SLICER_API_ENDPOINT, files = archivos_r)
-                archivos_r = {'file': archivo.file.open(mode='rb')}
-                parametros = {'escala_inicial':'0.2','escala_final':'1.6','escala_paso':'0.2'}
-                rfp = requests.post(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/', files = archivos_r, data = parametros)
-                archivo.file.close
-                #Parseamos la id de trabajo
-                slicer_jobs_ids[archivo] = rf.json()['id']
-                slicer_jobs_ids_poly[archivo] = rfp.json()['id']
-            ### Esperamos 600s a que haga todos los trabajos
-            print("Trabajos inicializados")
-            poly_f, slice_f = False, False
-            for _ in range(0,600):
-                if debug and _%60==0:
-                    print("---------ID-------------------------ESTADO-----------")
-                #Termino con el calculo de polinomios?
-                if not poly_f:
-                    for job_id in slicer_jobs_ids_poly.values():
-                        estado = requests.get(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/status/{}/'.format(job_id)).json()['estado']
-                        if debug and _%60==0:
-                            print("          {}                      {}".format(job_id,estado))
-                        if int(estado) >= 300:
-                            print("Hubo un error de sliceo, el identificador de trabajo es {}, con estado {}".format(job_id,estado))
-                            raise ValueError("Slicing error")
-                        if estado != '200':
-                            break
-                    else:
-                        poly_f = True
-                #Y con el calculo de pesos (aka sliceo comun)?
-                if not slice_f:
-                    for job_id in slicer_jobs_ids.values():
-                        estado = requests.get(settings.SLICER_API_ENDPOINT+'status/{}/'.format(job_id)).json()['estado']
-                        if debug and _%60==0:
-                            print("          {}                      {}".format(job_id,estado))
-                        if int(estado) >= 300:
-                            print("Hubo un error de sliceo, el identificador de trabajo es {}, con estado {}".format(job_id,estado))
-                            if estado == 304:
-                                control.revoke(self.request.id)
-                                objeto.delete()
-                            raise ValueError("Slicing error")
-                        if estado != '200':
-                            break
-                    else:
-                        slice_f = True
-                if slice_f and poly_f:
-                    break
-                time.sleep(1)
-            else:
-                #Pasaron los 300s, y no termino de slicear
-                print(slicer_jobs_ids.values(), slicer_jobs_ids_poly.values())
-                raise ValueError("Timeout al solicitar el sliceo de los modelos")
-            ### Completamos todos los datos de los archivos
-            print("Creacion de objeto")
-            for archivo in archivos:
-                #Creamos el polinomio
-                rf_p = requests.get(settings.SLICER_API_ENDPOINT+'tiempo_en_funcion_de_escala/status/{}/'.format(slicer_jobs_ids_poly[archivo])).json()
-                poly_coef = json.loads(rf_p['poly'])
-                polinomio = modelos.Polinomio()
-                polinomio.a0 = poly_coef[3]
-                polinomio.a1 = poly_coef[2]
-                polinomio.a2 = poly_coef[1]
-                polinomio.a3 = poly_coef[0]
-                polinomio.save()
-                #Establecemos los coeficientes y guardamos
-                rf = requests.get(settings.SLICER_API_ENDPOINT+'status/{}/'.format(slicer_jobs_ids[archivo])).json()
-                archivo.printing_time_default = rf['tiempo_estimado']
-                archivo.size_x_default = rf['size_x']
-                archivo.size_y_default = rf['size_y']
-                archivo.size_z_default = rf['size_z']
-                archivo.weight_default = rf['peso']
-                archivo.time_as_a_function_of_scale = polinomio
-                #Antes de guardar el archivo, hacemos un examen de sanidad sobre los resultados del sliceo
-                if slicer_results_sanity_check(res_file=rf,res_poly=rf_p):
-                    archivo.save()
-                else:
-                    print("El archivo {} fue removido".format(archivo.name()))
-                    archivos.remove(archivo)
+            # Ejecutar tareas de cotizacion
+            geometrymodel.create_orientation_result(priority=task.priority_get)
+            geometrymodel.create_geometry_result(priority=task.priority_get)
+            archivo.quote = SliceJob.objects.quote_object(geometrymodel, priority=task.priority_get)
+            archivo.save()
 
-            for archivo in archivos:
-                archivo.object = objeto
-                archivo.save()
+            # Limpiamos archivos descargados, y enlazamos modelos
+            info.file = archivo
+            info.save()
+            os.remove(link[0])
+            task.remove_subtask_by_result(link)
 
-            #Es posible que el objeto no tenga ningun archivo, en cuyo caso, lo borramos
-            if len(archivos) == 0:
-                objeto.delete()
-                return False
+            # Solicitamos cotizacion para armar el polinomio
+            for scale in np.linspace(0.2, 2, 9):
+                quote = SliceJob.objects.quote_object(geometrymodel, scale=scale, priority=task.priority_get)
+                modelos.PolinomioPunto.objects.create(quote=quote,
+                                                      scale=scale,
+                                                      poly=archivo.time_as_a_function_of_scale)
 
-            #Aplicamos el filtro de archivos
-            if objeto.origin != 'human':
-                thing_files_filter(objeto)
-                ## Borramos los archivos que no pasaron el filtro
-                for f in objeto.files.all():
-                    if f.informacionthingi.filter_passed == False:
-                        #f.delete()
-                        f.object = None
-                        f.save(update_fields=['object'])
 
-            modelo_ar = modelos.ModeloAR()
-            modelo_ar.object = objeto
-            modelo_ar.save()
+        # Lanzamos el filtro de archivos
+        apply_thing_objects_filter.s(objeto.id).apply_async(priority = task.priority_get)
 
-            #Preparamos el modelo AR
-            modelo_ar.create_sfb(generate=True)
+        # Preparamos el modelo AR
+        modelo_ar = modelos.ModeloAR()
+        modelo_ar.object = objeto
+        modelo_ar.save()
+        modelo_ar.create_sfb(generate=True)
 
-        except SoftTimeLimitExceeded:
-                print("Slicing tasks global tiemout (network error?)")
-                control.revoke(self.request.id)
-                objeto.delete()
-        except:
-            traceback.print_exc()
-
-        #Le quitamos el flag de importacion parcial
+        # Le quitamos el flag de importacion parcial
         objeto.partial = False
         objeto.save(update_fields=['partial'])
         return (objeto.id, True)
 
 
 
-def slicer_results_sanity_check(res_file,res_poly):
-    #El polinomio fue correctamente ajustado?
-    if len(json.loads(res_poly['escalas'])) < 5:
-        return False
-    #El archivo es muy pequeño?
-    if res_file['size_x']*res_file['size_y']*res_file['size_z'] < 2**3:
-        return False
-    return True
+
 
 def add_objects(max_things,start_page=0):
     #Funcion para popular la base de datos
     thing_counter = 0
     page_counter = start_page
+    things_to_add = []
     while thing_counter < max_things:
         page_counter += 1
-        r = request_from_thingi('/popular',False,'&page={}'.format(page_counter))
+        try:
+            r = request_from_thingi('/popular',False,'&page={}'.format(page_counter))
+        except:
+            r = []
+            time.sleep(2)
         for item in r:
             try:
-                add_object_from_thingiverse(item['id'])
-                thing_counter += 1
+                if not modelos.ReferenciaExterna.objects.filter(external_id=item['id']).exists():
+                    things_to_add.append(item['id'])
+                    thing_counter += 1
             except:
                 traceback.print_exc()
                 time.sleep(2)
-                print('Error al agregar objeto: {}'.format(item['id']))
+                print('Error al agregar objeto:')
         print('Contador: {}'.format(thing_counter))
+    for x in things_to_add:
+        try:
+            ObjetoThingi.objects.create_object(x, partial=False, origin='popular')
+        except:
+            traceback.print_exc()
+            time.sleep(2)
+            print('Error al agregar objeto: {}'.format(item['id']))
 
 def import_from_thingiverse_parser(base):
     '''
@@ -534,7 +530,7 @@ def import_from_thingiverse_parser(base):
     base = pickle.load(base)
     for thing in base:
         try:
-            add_object_from_thingiverse(thing['thing_id'],file_list = thing['thing_files_id'])
+            ObjetoThingi.objects.create_object(thing['thing_id'], partial=False, origin='human', file_list=thing['thing_files_id'])
         except:
             traceback.print_exc()
             time.sleep(2)

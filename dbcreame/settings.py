@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'thingiverse',
     'vision',
     'photogrammetry',
+    'slaicer'
 ]
 
 MIDDLEWARE = [
@@ -97,6 +98,9 @@ ROOT_URLCONF = 'dbcreame.urls'
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
+NOSE_ARGS = ['--nocapture',
+             '--nologcapture',]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -127,7 +131,7 @@ DATABASES = {
         'NAME': 'dbapi',
         'USER': 'dbapi',
         'PASSWORD': '***REMOVED***',
-        'HOST': '127.0.0.1',
+        'HOST': CURRENT_HOST,
         'PORT': '',
         'OPTIONS': {
            'sslmode': 'disable',
@@ -221,18 +225,19 @@ MERCADOPAGO_SANDBOX_MODE = True
 
 #Celery config
 CELERY_RESULT_BACKEND = 'django-db'
-CELERY_BROKER_URL = 'amqp://'
+CELERY_BROKER_URL = 'amqp://agus:***REMOVED***@{site}:5672/dbcreame'.format(site=CURRENT_HOST)
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_SOFT_TIME_LIMIT = 600*3
 CELERY_CHORD_UNLOCK_MAX_RETRIES = 60
 CELERY_PREFETCH_MULTIPLIER = 1
-CELERY_QUEUES = ('http','celery','low_priority')
 
 #Configuraciones adicionales
 SLICER_API_ENDPOINT = 'http://api.creame3d.com:7000/slicer/'
 THINGIVERSE_API_ENDPOINT = 'https://api.thingiverse.com/'
 DB_ADMIN_USERNAME = 'agus'
 DB_ADMIN_PASSWORD = 'Ferraro'
+SCRAPOXY_PASSWORD = '***REMOVED***'
+SCRAPOXY_MAX_SCALE = 7
 
 #Configuracion de APIs de Google (Translate y Vision)
 GOOGLE_APPLICATION_CREDENTIALS = "google_credentials.json"
@@ -242,4 +247,6 @@ GOOGLE_MAPS_API_KEY = "***REMOVED***"
 VISION_RESULTS_AMOUNT = 10
 
 #Configuraciones de precios
-PRECIO_POR_HORA_DE_IMPRESION = 40
+PRECIO_POR_HORA_DE_IMPRESION = 50
+SHIPNOW_API_URL = 'https://api.shipnow.com.ar/shipping_services/default?weight=1000&to_zip_code={zip}'
+

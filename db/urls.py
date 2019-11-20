@@ -11,7 +11,7 @@ urlpatterns = []
 urlpatterns += [
 path('query/category/<str:category>/', views.CategoryView.as_view()),
 path('query/tag/<str:tags>/', views.TagView.as_view()),
-path('query/id/<uuid:id>/', views.ObjectView.as_view()),
+path('query/id/<uuid:id>/', views.ObjectView.as_view(), name='search_object_by_id'),
 path('query/name/<str:name>/', views.NameView.as_view()),
 path('query/<str:query>/', views.SearchView.as_view())
 
@@ -22,14 +22,18 @@ path('list/object/', views.ListAllObjectsView.as_view()),
 path('list/category/', views.ListAllCategoriesView.as_view()),
 path('list/tag/', views.ListAllTagsView.as_view()),
 path('list/orders/', views.ListAllOrdersView.as_view()),
-path('list/colors/',views.ListAllColorsView.as_view()),
+path('list/colors/', views.ListAllColorsView.as_view()),
+path('list/liked_objects/', views.ListLikedObjects.as_view())
 ]
 #Operations
 urlpatterns += [
-path('update/like/<uuid:id>/',views.ToggleLike.as_view(), name='like_object'),
-path('update/rotate_ar_model/',views.ToggleRotated.as_view()),
-path('profile/',views.UserInformationView.as_view()),
-
+path('update/like/<uuid:id>/', views.ToggleLike.as_view(), name='like_object'),
+path('update/rotate_ar_model/', views.ToggleRotated.as_view()),
+path('profile/', views.UserInformationView.as_view()),
+path('comment/create/', views.CreateNewCommentView.as_view(), name='create_comment'),
+path('comment/single-view/<uuid:id>/', views.ViewUserComment.as_view(), name='view_single_comment'),
+path('comment/object/<uuid:id>/', views.ViewAllObjectComments.as_view()),
+path('review/create/', views.CreateNewValoracionView.as_view(), name='create_review'),
 ]
 #Ordenes
 urlpatterns += [

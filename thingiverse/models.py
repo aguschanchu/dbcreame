@@ -51,23 +51,24 @@ class QueryEvent(models.Model):
     key = models.ForeignKey(ApiKey, on_delete=models.CASCADE, related_name='meter')
 
 class ObjetoThingiManager(models.Manager):
-
     def create_object(self, external_id, file_list=None, partial=False, origin=None, update_object=False, subtask_ids_list = None):
         from . import tasks
         object = self.create(external_id=external_id, file_list=file_list, partial=partial)
         # Ejecutamos la tarea
-        job = tasks.add_object_from_thingiverse_chain(thingiid=external_id, file_list=file_list, partial=partial, origin=origin).apply_async(max_retries=300)
+        job = tasks.add_object_from_thingiverse_chain(thingiid=external_id, file_list=file_list, partial=partial, origin=origin).apply_async(max_retries=300, priority=ObjetoThingi.priority_def(origin))
         object.celery_id = job.id
         object.save(update_fields=["celery_id"])
         return object
 
-    def update_object(self, object_id, file_list=None, update_object=True, partial=False, subtask_ids_list = None):
+    def update_object(self, object_id, file_list=None, update_object=True, partial=False, subtask_ids_list = None, origin = None):
         from . import tasks
-        object = self.create(object_id=object_id,external_id=object_id.external_id.external_id, file_list=file_list, partial=partial, update_object=update_object)
-        job = tasks.add_files_to_thingiverse_object.delay([object_id.id], file_list)
+        object = self.create(object_id=object_id,external_id=object_id.external_id.external_id, file_list=file_list, partial=partial, update_object=update_object, origin=origin)
+        job = tasks.add_files_to_thingiverse_object.s([object_id.id], file_list).apply_async(priority=ObjetoThingi.priority_def(origin))
         object.celery_id = job.id
         object.save(update_fields=['celery_id','external_id'])
         return object
+
+
 
 class ObjetoThingi(models.Model):
     estados = (
@@ -85,10 +86,21 @@ class ObjetoThingi(models.Model):
     celery_id = models.CharField(max_length=100,blank=True)
     object_id = models.ForeignKey('db.Objeto',null=True,on_delete=models.SET_NULL)
     partial = models.BooleanField(default=True)
-    origin = models.CharField(max_length=200,blank=True,null=True)
+    origin = models.CharField(max_length=200, blank=True, null=True)
     update_object = models.BooleanField(default=False)
 
     objects = ObjetoThingiManager()
+
+    @staticmethod
+    def priority_def(origin):
+        if origin in ['vision', 'human', 'app']:
+            return 9
+        else:
+            return 3
+
+    @property
+    def priority_get(self):
+        return self.priority_def(self.origin)
 
     def update_status(self):
         res = AsyncResult(self.celery_id)
@@ -159,8 +171,10 @@ class AtributoExterno(models.Model):
     download_count = models.IntegerField(default=0)
     added = models.DateTimeField(default=timezone.now)
     original_file_count = models.IntegerField(default=0)
-    #Paso el filtro?
+    # Paso el filtro de things?
     filter_passed = models.BooleanField(default=True)
+    # Pasamos el filtro de archivos sobre la lista actual?
+    files_filter_passed = models.NullBooleanField(default=None)
 
 
 '''
@@ -172,7 +186,6 @@ class InformacionThingi(models.Model):
     original_filename = models.CharField(max_length=300)
     date = models.DateTimeField(default=timezone.now,blank=True)
     thingi_id = models.IntegerField(default=0)
-    #Paso el filtro?
     filter_passed = models.NullBooleanField(default=None)
 
 
@@ -200,9 +213,7 @@ class InformacionMesh(models.Model):
 
     @staticmethod
     def informacion_mesh_de_archivo_stl(archivo_stl: modelos.ArchivoSTL):
-        with archivo_stl.file.file as file:
-            mesh = trimesh.load_mesh(file.open(mode='rb'),file_type='stl')
-            file.close()
+        mesh = trimesh.load_mesh(archivo_stl.model.get_model_path())
         mesh_data = InformacionMesh()
         mesh_data.bounding_box_x, mesh_data.bounding_box_y, mesh_data.bounding_box_z = mesh.bounding_box_oriented.primitive.extents
         mesh_data.area = mesh.area
